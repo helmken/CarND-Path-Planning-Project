@@ -221,10 +221,11 @@ int main()
     int lane = 1;
 
     // have a reference velocity to target
-    double ref_vel = 49.5; // mph
+    // double ref_vel = 49.5; // mph <- the high speed value causes a big jerk at initialization
+    double ref_vel = 0.0; // mph <- start slow and increase velocity
 
     h.onMessage(
-        [&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy]
+        [&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane, &ref_vel]
         (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) 
     {
         // "42" at the start of the message means there's a websocket message event.
@@ -246,7 +247,7 @@ int main()
                 {
                     // j[1] is the data JSON object
 
-                      // Main car's localization Data
+                    // Main car's localization Data
                     double car_x = j[1]["x"];
                     double car_y = j[1]["y"];
                     double car_s = j[1]["s"];
@@ -263,12 +264,12 @@ int main()
                     double end_path_d = j[1]["end_path_d"];
 
                     // Sensor Fusion Data, a list of all other cars on the same side of the road.
-                    auto sensor_fusion = j[1]["sensor_fusion"];
+                    //auto sensor_fusion = j[1]["sensor_fusion"];
+                    vector<vector<double>> sensor_fusion = j[1]["sensor_fusion"];
 
                     // code from walkthrough video
                     int prev_size = previous_path_x.size();
 
-                    // /*
                     if (prev_size > 0)
                     {
                         car_s = end_path_s;
@@ -276,47 +277,66 @@ int main()
 
                     bool too_close = false;
 
+                    // sensor_fusion: list of other cars on the highway?!?
+                    // to avoid hitting other cars: go through sensor_fusion list and check if 
+                    // another car is in our lane
+                    // if yes: check how close
+                    
                     // find rev_v to use
+                    // i is index of other car on the road 
                     for (int i = 0; i < sensor_fusion.size(); ++i)
                     {
                         // car is in my lane
-                        float d = sensor_fusion[i][6];
+                        // d is position of i-th car on the road
+                        // d tells us on what lane the other car is
+                        float d = sensor_fusion[i][6]; 
+
+                        // lane is our lane 
                         if (d < (2 + 4 * lane + 2) && d >(2 + 4 * lane - 2))
                         {
+                            // so the car is in our lane
                             double vx = sensor_fusion[i][3];
                             double vy = sensor_fusion[i][4];
                             double check_speed = sqrt(vx * vx + vy * vy);
                             double check_car_s = sensor_fusion[i][5];
 
+                            // check_car_s can help us to predict where that car is in the future  
                             check_car_s += ((double)prev_size * 0.2 * check_speed); // if using previous points can project s value out
+                            
                             // check s values greater than mine and s gap
                             if ((check_car_s > car_s) && (check_car_s - car_s) < 30)
                             {
+                                // check if our car is close to the other car -> if so, need to take action
+
                                 // do some logic here, lower reference velocity so we dont crash into the car in front of us,
-                                // could als flag to try to change lanes
-                                ref_vel = 29.5; // mph
-                                // too_close = true;
+                                // could also flag to try to change lanes
+                                
+                                // ref_vel = 29.5; // mph
+
+                                // lines below consider this flag and reduce speed
+                                too_close = true;
+                                if (lane > 0)
+                                {
+                                    lane = 0;
+                                }
                             }
                         }
                     }
 
-                    // */
 
-                    ///*
                     if (too_close)
                     {
-                        ref_vel -= 0.224;
+                        ref_vel -= 0.224; // this is somehow related to decelerating with 5 m/s^2
                     }
                     else if (ref_vel < 49.5)
                     {
                         ref_vel += 0.224;
                     }
-                    //*/
 
 
                     // create a list of widely spred (x, y) waypoints, evenly spaced at 30 m
-                    // later we will integrate these waypoints with a spline and fill it in
-                    // with more points that control ...
+                    // later we will interpolate these waypoints with a spline and fill it in
+                    // with more points that control speed
 
                     vector<double> ptsx;
                     vector<double> ptsy;
@@ -361,7 +381,7 @@ int main()
                         ptsy.push_back(ref_y);
                     }
 
-                    // in frenet add evenly 30m spaced points ahead of the starting reference
+                    // in frenet frame add evenly 30m spaced points ahead of the starting reference
                     vector<double> next_wp0 = getXY(car_s + 30, (2 + 4 * lane),
                         map_waypoints_s, map_waypoints_x, map_waypoints_y);
                     vector<double> next_wp1 = getXY(car_s + 60, (2 + 4 * lane),
@@ -415,43 +435,58 @@ int main()
                     double x_add_on = 0;
 
                     // fill up the rest of our path planner after filling it with previous points,
-                    // here we will always output ...
-
+                    // here we will always output 50 points
                     for (int i = 1; i <= 50 - previous_path_x.size(); ++i)
                     {
+                        double N = (target_dist / (0.2 * ref_vel / 2.24)); // 2.24 mph -> m/s
+                        double x_point = x_add_on + target_x / N;
+                        double y_point = s(x_point);
 
+                        x_add_on = x_point;
+
+                        double x_ref = x_point;
+                        double y_ref = y_point;
+
+                        // rotate back to normal after rotating it earlier
+                        x_point = (x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw));
+                        y_point = (x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw));
+
+                        x_point += ref_x;
+                        y_point += ref_y;
+
+                        next_x_vals.push_back(x_point);
+                        next_y_vals.push_back(y_point);
                     }
-                    // 35 mins in video
 
 
                     json msgJson;
 
-                    vector<double> next_x_vals;
-                    vector<double> next_y_vals;
+                    //vector<double> next_x_vals;
+                    //vector<double> next_y_vals;
 
 
-                    // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-                    // code from walkthrough video
-                    //double dist_inc(0.5); // related to speed 50 mph
-                    double dist_inc(0.3); // reducing this value results in lower average speed
-                    for (int i(0); i < 50; ++i)
-                    {
-                        // use frenet to stay in the lane
-                        double next_s = car_s + (i + 1) * dist_inc;
-                        double next_d = 6; // related to the width of the road and the position of waypoints
-                        vector<double> xy = getXY(next_s, next_d,
-                            map_waypoints_s, map_waypoints_x, map_waypoints_y);
+                    //// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+                    //// code from walkthrough video
+                    ////double dist_inc(0.5); // related to speed 50 mph
+                    //double dist_inc(0.3); // reducing this value results in lower average speed
+                    //for (int i(0); i < 50; ++i)
+                    //{
+                    //    // use frenet to stay in the lane
+                    //    double next_s = car_s + (i + 1) * dist_inc;
+                    //    double next_d = 6; // related to the width of the road and the position of waypoints
+                    //    vector<double> xy = getXY(next_s, next_d,
+                    //        map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
-                        // straight path
-                        //next_x_vals.push_back(car_x + (dist_inc * i) * cos(deg2rad(car_yaw)));
-                        //next_y_vals.push_back(car_y + (dist_inc * i) * sin(deg2rad(car_yaw)));
+                    //    // straight path
+                    //    //next_x_vals.push_back(car_x + (dist_inc * i) * cos(deg2rad(car_yaw)));
+                    //    //next_y_vals.push_back(car_y + (dist_inc * i) * sin(deg2rad(car_yaw)));
 
-                        // use frenet - with this, the car stays in its lane
-                        next_x_vals.push_back(xy[0]);
-                        next_y_vals.push_back(xy[1]);
+                    //    // use frenet - with this, the car stays in its lane
+                    //    next_x_vals.push_back(xy[0]);
+                    //    next_y_vals.push_back(xy[1]);
 
-                    }
-                    // ... end of code from walkthrough video
+                    //}
+                    //// ... end of code from walkthrough video
 
 
                     msgJson["next_x"] = next_x_vals;
