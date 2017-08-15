@@ -11,8 +11,11 @@ set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
 set(sources
     src/conversion_helpers.h
+    src/dynamic_object.h
+    src/ego.h
     src/json.hpp
     src/main.cpp
+    src/simulator_message_reader.h
     src/spline.h
     src/waypoint_map.h
 )

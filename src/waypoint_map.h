@@ -21,7 +21,7 @@ int ClosestWaypoint(
     double closestLen = 100000; //large number
     int closestWaypoint = 0;
 
-    for (int i = 0; i < maps_x.size(); i++)
+    for (size_t i(0); i < maps_x.size(); i++)
     {
         double map_x = maps_x[i];
         double map_y = maps_y[i];

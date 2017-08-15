@@ -3,13 +3,16 @@
 #include <chrono>
 #include <thread>
 #include <vector>
+#include <map>
+
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 #include "spline.h" // used to smooth out edgy path from waypoints
 
-
+#include "ego.h"
 #include "conversion_helpers.h"
+#include "simulator_message_reader.h"
 #include "waypoint_map.h"
 
 
@@ -68,37 +71,33 @@ int main()
             if (jsonString != "") 
             {
                 auto simMessage = json::parse(jsonString);
+                //cout << simMessage << "\n";
 
-                cout << simMessage << "\n";
-
-                string event = simMessage[0].get<string>();
-
-                if (event == "telemetry") 
+                string simEventType = simMessage[0].get<string>();
+                if (simEventType == "telemetry")
                 {
-                    // simMessage[1] is the data JSON object
-                    auto telemetry = simMessage[1];
+                    json telemetry = simMessage[1];
 
                     // Main car's localization Data
-                    double car_x = simMessage[1]["x"];
-                    double car_y = simMessage[1]["y"];
-                    double car_s = simMessage[1]["s"];
-                    double car_d = simMessage[1]["d"];
-                    double car_yaw = simMessage[1]["yaw"];
-                    double car_speed = simMessage[1]["speed"];
+                    //double car_x = telemetry["x"];
+                    //double car_y = telemetry["y"];
+                    //double car_s = telemetry["s"];
+                    //double car_d = telemetry["d"];
+                    //double car_yaw = telemetry["yaw"];
+                    //double car_speed = telemetry["speed"];
+                    sEgo ego = ReadEgoFromJson(telemetry);
 
                     // Previous path data given to the Planner
-                    //auto previous_path_x = simMessage[1]["previous_path_x"];
-                    //auto previous_path_y = simMessage[1]["previous_path_y"];
-                    vector<double> previous_path_x = simMessage[1]["previous_path_x"];
-                    vector<double> previous_path_y = simMessage[1]["previous_path_y"];
+                    vector<double> previous_path_x = telemetry["previous_path_x"];
+                    vector<double> previous_path_y = telemetry["previous_path_y"];
 
                     // Previous path's end s and d values 
-                    double end_path_s = simMessage[1]["end_path_s"];
-                    double end_path_d = simMessage[1]["end_path_d"];
+                    double end_path_s = telemetry["end_path_s"];
+                    double end_path_d = telemetry["end_path_d"];
 
                     // Sensor Fusion Data, a list of all other cars on the same side of the road.
                     //auto sensor_fusion = simMessage[1]["sensor_fusion"];
-                    vector<vector<double>> sensor_fusion = simMessage[1]["sensor_fusion"];
+                    vector<vector<double>> sensor_fusion = telemetry["sensor_fusion"];
 
                     // from slack:
                     //auto sensor_fusion = simMessage[1]["sensor_fusion"];
@@ -124,7 +123,7 @@ int main()
 
                     if (prev_size > 0)
                     {
-                        car_s = end_path_s;
+                        ego.s = end_path_s;
                     }
 
                     bool too_close = false;
@@ -156,7 +155,7 @@ int main()
                             check_car_s += ((double)prev_size * 0.2 * check_speed); // if using previous points can project s value out
                             
                             // check s values greater than mine and s gap
-                            if ((check_car_s > car_s) && (check_car_s - car_s) < 30)
+                            if ((check_car_s > ego.s) && (check_car_s - ego.s) < 30)
                             {
                                 // check if our car is close to the other car -> if so, need to take action
 
@@ -196,22 +195,22 @@ int main()
                     // reference x, y, yaw states
                     // either we will reference the starting point as where the car is or at
                     // the previous paths end point
-                    double ref_x = car_x;
-                    double ref_y = car_y;
-                    double ref_yaw = deg2rad(car_yaw);
+                    double ref_x = ego.x;
+                    double ref_y = ego.y;
+                    double ref_yaw = deg2rad(ego.yaw);
 
                     // if previous size is almost empty, use the car as starting reference
                     if (prev_size < 2)
                     {
                         // use two points that make the path tangent to the car
-                        double prev_car_x = car_x - cos(car_yaw);
-                        double prev_car_y = car_y - sin(car_yaw);
+                        double prev_car_x = ego.x - cos(ego.yaw);
+                        double prev_car_y = ego.y - sin(ego.yaw);
 
                         ptsx.push_back(prev_car_x);
-                        ptsx.push_back(car_x);
+                        ptsx.push_back(ego.x);
 
                         ptsy.push_back(prev_car_y);
-                        ptsy.push_back(car_y);
+                        ptsy.push_back(ego.y);
                     }
                     else
                     {
@@ -234,11 +233,11 @@ int main()
                     }
 
                     // in frenet frame add evenly 30m spaced points ahead of the starting reference
-                    vector<double> next_wp0 = getXY(car_s + 30, (2 + 4 * lane),
+                    vector<double> next_wp0 = getXY(ego.s + 30, (2 + 4 * lane),
                         waypointMap.map_waypoints_s, waypointMap.map_waypoints_x, waypointMap.map_waypoints_y);
-                    vector<double> next_wp1 = getXY(car_s + 60, (2 + 4 * lane),
+                    vector<double> next_wp1 = getXY(ego.s + 60, (2 + 4 * lane),
                         waypointMap.map_waypoints_s, waypointMap.map_waypoints_x, waypointMap.map_waypoints_y);
-                    vector<double> next_wp2 = getXY(car_s + 90, (2 + 4 * lane),
+                    vector<double> next_wp2 = getXY(ego.s + 90, (2 + 4 * lane),
                         waypointMap.map_waypoints_s, waypointMap.map_waypoints_x, waypointMap.map_waypoints_y);
 
                     ptsx.push_back(next_wp0[0]);
@@ -324,7 +323,7 @@ int main()
                     //for (int i(0); i < 50; ++i)
                     //{
                     //    // use frenet to stay in the lane
-                    //    double next_s = car_s + (i + 1) * dist_inc;
+                    //    double next_s = ego.s + (i + 1) * dist_inc;
                     //    double next_d = 6; // related to the width of the road and the position of waypoints
                     //    vector<double> xy = getXY(next_s, next_d,
                     //        waypointMap.map_waypoints_s, waypointMap.map_waypoints_x, waypointMap.map_waypoints_y);
