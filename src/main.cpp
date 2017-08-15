@@ -63,40 +63,45 @@ int main()
         //cout << sdata << endl;
         if (length && length > 2 && data[0] == '4' && data[1] == '2') 
         {
-            auto s = hasData(data);
+            auto jsonString = hasData(data);
 
-            if (s != "") 
+            if (jsonString != "") 
             {
-                auto j = json::parse(s);
+                auto simMessage = json::parse(jsonString);
 
-                string event = j[0].get<string>();
+                cout << simMessage << "\n";
+
+                string event = simMessage[0].get<string>();
 
                 if (event == "telemetry") 
                 {
-                    // j[1] is the data JSON object
+                    // simMessage[1] is the data JSON object
+                    auto telemetry = simMessage[1];
 
                     // Main car's localization Data
-                    double car_x = j[1]["x"];
-                    double car_y = j[1]["y"];
-                    double car_s = j[1]["s"];
-                    double car_d = j[1]["d"];
-                    double car_yaw = j[1]["yaw"];
-                    double car_speed = j[1]["speed"];
+                    double car_x = simMessage[1]["x"];
+                    double car_y = simMessage[1]["y"];
+                    double car_s = simMessage[1]["s"];
+                    double car_d = simMessage[1]["d"];
+                    double car_yaw = simMessage[1]["yaw"];
+                    double car_speed = simMessage[1]["speed"];
 
                     // Previous path data given to the Planner
-                    auto previous_path_x = j[1]["previous_path_x"];
-                    auto previous_path_y = j[1]["previous_path_y"];
-                    
+                    //auto previous_path_x = simMessage[1]["previous_path_x"];
+                    //auto previous_path_y = simMessage[1]["previous_path_y"];
+                    vector<double> previous_path_x = simMessage[1]["previous_path_x"];
+                    vector<double> previous_path_y = simMessage[1]["previous_path_y"];
+
                     // Previous path's end s and d values 
-                    double end_path_s = j[1]["end_path_s"];
-                    double end_path_d = j[1]["end_path_d"];
+                    double end_path_s = simMessage[1]["end_path_s"];
+                    double end_path_d = simMessage[1]["end_path_d"];
 
                     // Sensor Fusion Data, a list of all other cars on the same side of the road.
-                    //auto sensor_fusion = j[1]["sensor_fusion"];
-                    vector<vector<double>> sensor_fusion = j[1]["sensor_fusion"];
+                    //auto sensor_fusion = simMessage[1]["sensor_fusion"];
+                    vector<vector<double>> sensor_fusion = simMessage[1]["sensor_fusion"];
 
                     // from slack:
-                    //auto sensor_fusion = j[1]["sensor_fusion"];
+                    //auto sensor_fusion = simMessage[1]["sensor_fusion"];
 
                     //for (int i = 0; i < sensor_fusion.size(); i++) {
                     //    int id = sensor_fusion[i][0];
@@ -115,7 +120,7 @@ int main()
 
 
                     // code from walkthrough video
-                    int prev_size = previous_path_x.size();
+                    size_t prev_size = previous_path_x.size();
 
                     if (prev_size > 0)
                     {
@@ -131,12 +136,12 @@ int main()
                     
                     // find rev_v to use
                     // i is index of other car on the road 
-                    for (int i = 0; i < sensor_fusion.size(); ++i)
+                    for (size_t i(0); i < sensor_fusion.size(); ++i)
                     {
                         // car is in my lane
                         // d is position of i-th car on the road
                         // d tells us on what lane the other car is
-                        float d = sensor_fusion[i][6]; 
+                        double d = sensor_fusion[i][6]; 
 
                         // lane is our lane 
                         if (d < (2 + 4 * lane + 2) && d >(2 + 4 * lane - 2))
@@ -245,7 +250,7 @@ int main()
                     ptsy.push_back(next_wp2[1]);
 
                     // transformation to local car coordinates
-                    for (int i(0); i < ptsx.size(); ++i)
+                    for (size_t i(0); i < ptsx.size(); ++i)
                     {
                         // shift car reference angle to 0 degrees (as in MPC project)
 
@@ -267,7 +272,7 @@ int main()
                     vector<double> next_y_vals;
 
                     // start with all of the previous path points from last time
-                    for (int i(0); i < previous_path_x.size(); ++i)
+                    for (size_t i(0); i < previous_path_x.size(); ++i)
                     {
                         next_x_vals.push_back(previous_path_x[i]);
                         next_y_vals.push_back(previous_path_y[i]);
@@ -283,7 +288,7 @@ int main()
 
                     // fill up the rest of our path planner after filling it with previous points,
                     // here we will always output 50 points
-                    for (int i = 1; i <= 50 - previous_path_x.size(); ++i)
+                    for (size_t i(1); i <= 50 - previous_path_x.size(); ++i)
                     {
                         double N = (target_dist / (0.2 * ref_vel / 2.24)); // 2.24 mph -> m/s
                         double x_point = x_add_on + target_x / N;
