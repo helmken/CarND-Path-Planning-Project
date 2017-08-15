@@ -259,7 +259,7 @@ sMap ReadMapFile()
 
 int main() 
 {
-    uWS::Hub h;
+    uWS::Hub uwsHub;
 
     sMap map = ReadMapFile();
 
@@ -271,7 +271,7 @@ int main()
     // double ref_vel = 49.5; // mph <- the high speed value causes a big jerk at initialization
     double ref_vel = 0.0; // mph <- start slow and increase velocity
 
-    h.onMessage(
+    uwsHub.onMessage(
         [&map, &lane, &ref_vel]
         (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
     {
@@ -576,7 +576,7 @@ int main()
     // We don't need this since we're not using HTTP but if it's removed the
     // program
     // doesn't compile :-(
-    h.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data,
+    uwsHub.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data,
         size_t, size_t) 
     {
         const std::string s = "<h1>Hello world!</h1>";
@@ -591,12 +591,12 @@ int main()
         }
     });
 
-    h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) 
+    uwsHub.onConnection([&uwsHub](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req)
     {
         std::cout << "Connected!!!" << std::endl;
     });
 
-    h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,
+    uwsHub.onDisconnection([&uwsHub](uWS::WebSocket<uWS::SERVER> ws, int code,
         char *message, size_t length) 
     {
         ws.close();
@@ -604,7 +604,7 @@ int main()
     });
 
     int port = 4567;
-    if (h.listen(port)) 
+    if (uwsHub.listen(port))
     {
         std::cout << "Listening to port " << port << std::endl;
     }
@@ -613,5 +613,6 @@ int main()
         std::cerr << "Failed to listen to port" << std::endl;
         return -1;
     }
-    h.run();
+
+    uwsHub.run();
 }
