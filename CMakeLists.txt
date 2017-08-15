@@ -9,7 +9,9 @@ add_definitions(-std=c++11 -g -DHAVE_STDDEF_H -D_USE_MATH_DEFINES)
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
-set(sources 
+set(sources
+    src/conversion_helpers.h
+    src/waypoint_map.h
     src/main.cpp
 )
 
