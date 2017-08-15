@@ -79,25 +79,13 @@ int main()
                     json telemetry = simMessage[1];
 
                     // Main car's localization Data
-                    //double car_x = telemetry["x"];
-                    //double car_y = telemetry["y"];
-                    //double car_s = telemetry["s"];
-                    //double car_d = telemetry["d"];
-                    //double car_yaw = telemetry["yaw"];
-                    //double car_speed = telemetry["speed"];
                     sEgo ego = ReadEgoFromJson(telemetry);
 
                     // Previous path data given to the Planner
-                    vector<double> previous_path_x = telemetry["previous_path_x"];
-                    vector<double> previous_path_y = telemetry["previous_path_y"];
-
-                    // Previous path's end s and d values 
-                    double end_path_s = telemetry["end_path_s"];
-                    double end_path_d = telemetry["end_path_d"];
+                    sPath previousPath = ReadPathFromJson(telemetry);
 
                     // Sensor Fusion Data, a list of all other cars on the same side of the road.
-                    //auto sensor_fusion = simMessage[1]["sensor_fusion"];
-                    vector<vector<double>> sensor_fusion = telemetry["sensor_fusion"];
+                    json sensor_fusion = telemetry["sensor_fusion"];
 
                     // from slack:
                     //auto sensor_fusion = simMessage[1]["sensor_fusion"];
@@ -119,11 +107,11 @@ int main()
 
 
                     // code from walkthrough video
-                    size_t prev_size = previous_path_x.size();
+                    size_t prev_size = previousPath.x.size();
 
                     if (prev_size > 0)
                     {
-                        ego.s = end_path_s;
+                        ego.s = previousPath.endS;
                     }
 
                     bool too_close = false;
@@ -217,11 +205,11 @@ int main()
                         // use the previous path's end point as starting reference
 
                         // redefine reference state as previous path end point
-                        ref_x = previous_path_x[prev_size - 1];
-                        ref_y = previous_path_y[prev_size - 1];
+                        ref_x = previousPath.x[prev_size - 1];
+                        ref_y = previousPath.y[prev_size - 1];
 
-                        double ref_x_prev = previous_path_x[prev_size - 2];
-                        double ref_y_prev = previous_path_y[prev_size - 2];
+                        double ref_x_prev = previousPath.x[prev_size - 2];
+                        double ref_y_prev = previousPath.y[prev_size - 2];
                         ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
 
                         // use two points that make the path tangent to the previous path's end point
@@ -271,10 +259,10 @@ int main()
                     vector<double> next_y_vals;
 
                     // start with all of the previous path points from last time
-                    for (size_t i(0); i < previous_path_x.size(); ++i)
+                    for (size_t i(0); i < previousPath.x.size(); ++i)
                     {
-                        next_x_vals.push_back(previous_path_x[i]);
-                        next_y_vals.push_back(previous_path_y[i]);
+                        next_x_vals.push_back(previousPath.x[i]);
+                        next_y_vals.push_back(previousPath.y[i]);
                     }
 
                     // calculate how to break up spline points so that we travel
@@ -287,7 +275,7 @@ int main()
 
                     // fill up the rest of our path planner after filling it with previous points,
                     // here we will always output 50 points
-                    for (size_t i(1); i <= 50 - previous_path_x.size(); ++i)
+                    for (size_t i(1); i <= 50 - previousPath.x.size(); ++i)
                     {
                         double N = (target_dist / (0.2 * ref_vel / 2.24)); // 2.24 mph -> m/s
                         double x_point = x_add_on + target_x / N;

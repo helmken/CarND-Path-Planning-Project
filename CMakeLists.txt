@@ -15,6 +15,7 @@ set(sources
     src/ego.h
     src/json.hpp
     src/main.cpp
+    src/path.h
     src/simulator_message_reader.h
     src/spline.h
     src/waypoint_map.h
