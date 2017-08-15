@@ -81,6 +81,32 @@ int ClosestWaypoint(double x, double y, vector<double> maps_x, vector<double> ma
 /**
  * returns waypoint that makes most sense considering the current orientation
  */
+//int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
+//{
+//    int closestWaypoint = ClosestWaypoint(x, y, maps_x, maps_y);
+//
+//    double map_x = maps_x[closestWaypoint];
+//    double map_y = maps_y[closestWaypoint];
+//
+//    double heading = atan2((map_y - y), (map_x - x));
+//
+//    double angle = abs(theta - heading);
+//
+//    //if (angle > pi() / 4)
+//    //{
+//    //    closestWaypoint++;
+//    //}
+//
+//    // from slack: correct would be
+//    if (angle > pi() / 2)
+//    {
+//        closestWaypoint++;
+//    }
+//
+//    return closestWaypoint;
+//}
+
+// version from excodecowboy:
 int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
 {
     int closestWaypoint = ClosestWaypoint(x, y, maps_x, maps_y);
@@ -90,11 +116,19 @@ int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector
 
     double heading = atan2((map_y - y), (map_x - x));
 
-    double angle = abs(theta - heading);
+    double theta_pos = fmod(theta + (2 * pi()), 2 * pi());
+    double heading_pos = fmod(heading + (2 * pi()), 2 * pi());
+    double angle = abs(theta_pos - heading_pos);
+    if (angle > pi()) {
+        angle = (2 * pi()) - angle;
+    }
 
-    if (angle > pi() / 4)
+    cout << "heading:" << heading << " diff:" << angle << endl;
+
+    if (angle > pi() / 2)
     {
-        closestWaypoint++;
+        closestWaypoint = (closestWaypoint + 1) % maps_x.size();
+
     }
 
     return closestWaypoint;
@@ -149,6 +183,7 @@ vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x
 }
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
+// according to slack getXY should not be used - instead splines should be used
 vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> maps_x, vector<double> maps_y)
 {
     int prev_wp = -1;
@@ -175,49 +210,61 @@ vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> m
     return {x, y};
 }
 
-int main() 
+struct sMap
 {
-    uWS::Hub h;
-
     // Load up map values for waypoint's x,y,s and d normalized normal vectors
     vector<double> map_waypoints_x;
     vector<double> map_waypoints_y;
     vector<double> map_waypoints_s;
     vector<double> map_waypoints_dx;
     vector<double> map_waypoints_dy;
+};
 
+sMap ReadMapFile()
+{
     // Waypoint map to read from
     string map_file_ = "../data/highway_map.csv";
 
     // The max s value before wrapping around the track back to 0
-    double max_s = 6945.554;
+    // double max_s = 6945.554; // TODO: unused?
 
     ifstream in_map_(map_file_.c_str(), ifstream::in);
 
+    sMap map;
+
     // d_x and d_y are normal components of a waypoint
     string line;
-    while (getline(in_map_, line)) 
+    while (getline(in_map_, line))
     {
         istringstream iss(line);
         double x;
         double y;
-        float s;
-        float d_x;
-        float d_y;
+        double s;
+        double d_x;
+        double d_y;
         iss >> x;
         iss >> y;
         iss >> s;
         iss >> d_x;
         iss >> d_y;
-        map_waypoints_x.push_back(x);
-        map_waypoints_y.push_back(y);
-        map_waypoints_s.push_back(s);
-        map_waypoints_dx.push_back(d_x);
-        map_waypoints_dy.push_back(d_y);
+        map.map_waypoints_x.push_back(x);
+        map.map_waypoints_y.push_back(y);
+        map.map_waypoints_s.push_back(s);
+        map.map_waypoints_dx.push_back(d_x);
+        map.map_waypoints_dy.push_back(d_y);
     }
 
-    // lane 0 is left lane, 1 is middle, 2 is right
-    // start in lane 1:
+    return map;
+}
+
+int main() 
+{
+    uWS::Hub h;
+
+    sMap map = ReadMapFile();
+
+    // lane 0 is left, 1 is middle, 2 is right lane
+    // start in middle lane:
     int lane = 1;
 
     // have a reference velocity to target
@@ -225,8 +272,8 @@ int main()
     double ref_vel = 0.0; // mph <- start slow and increase velocity
 
     h.onMessage(
-        [&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane, &ref_vel]
-        (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) 
+        [&map, &lane, &ref_vel]
+        (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
     {
         // "42" at the start of the message means there's a websocket message event.
         // The 4 signifies a websocket message
@@ -266,6 +313,25 @@ int main()
                     // Sensor Fusion Data, a list of all other cars on the same side of the road.
                     //auto sensor_fusion = j[1]["sensor_fusion"];
                     vector<vector<double>> sensor_fusion = j[1]["sensor_fusion"];
+
+                    // from slack:
+                    //auto sensor_fusion = j[1]["sensor_fusion"];
+
+                    //for (int i = 0; i < sensor_fusion.size(); i++) {
+                    //    int id = sensor_fusion[i][0];
+                    //    double s = sensor_fusion[i][5];
+                    //    double d = sensor_fusion[i][6];
+                    //    double vx = sensor_fusion[i][3];
+                    //    double vy = sensor_fusion[i][4];
+                    //}
+
+                    // ...
+                    //void update_sensor_fusion(vector< vector<double>> sensor_fusion, int index, long long time_difference_b) {
+                    //    this->sf_x = sensor_fusion[index][1];
+                    //    this->sf_y = sensor_fusion[index][2];
+
+                    // ... end of from slack
+
 
                     // code from walkthrough video
                     int prev_size = previous_path_x.size();
@@ -383,11 +449,11 @@ int main()
 
                     // in frenet frame add evenly 30m spaced points ahead of the starting reference
                     vector<double> next_wp0 = getXY(car_s + 30, (2 + 4 * lane),
-                        map_waypoints_s, map_waypoints_x, map_waypoints_y);
+                        map.map_waypoints_s, map.map_waypoints_x, map.map_waypoints_y);
                     vector<double> next_wp1 = getXY(car_s + 60, (2 + 4 * lane),
-                        map_waypoints_s, map_waypoints_x, map_waypoints_y);
+                        map.map_waypoints_s, map.map_waypoints_x, map.map_waypoints_y);
                     vector<double> next_wp2 = getXY(car_s + 90, (2 + 4 * lane),
-                        map_waypoints_s, map_waypoints_x, map_waypoints_y);
+                        map.map_waypoints_s, map.map_waypoints_x, map.map_waypoints_y);
 
                     ptsx.push_back(next_wp0[0]);
                     ptsx.push_back(next_wp1[0]);
@@ -475,7 +541,7 @@ int main()
                     //    double next_s = car_s + (i + 1) * dist_inc;
                     //    double next_d = 6; // related to the width of the road and the position of waypoints
                     //    vector<double> xy = getXY(next_s, next_d,
-                    //        map_waypoints_s, map_waypoints_x, map_waypoints_y);
+                    //        map.map_waypoints_s, map.map_waypoints_x, map.map_waypoints_y);
 
                     //    // straight path
                     //    //next_x_vals.push_back(car_x + (dist_inc * i) * cos(deg2rad(car_yaw)));
