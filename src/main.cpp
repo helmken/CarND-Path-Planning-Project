@@ -85,26 +85,9 @@ int main()
                     sPath previousPath = ReadPathFromJson(telemetry);
 
                     // Sensor Fusion Data, a list of all other cars on the same side of the road.
-                    json sensor_fusion = telemetry["sensor_fusion"];
+                    json sensorFusion = telemetry["sensor_fusion"];
 
-                    // from slack:
-                    //auto sensor_fusion = simMessage[1]["sensor_fusion"];
-
-                    //for (int i = 0; i < sensor_fusion.size(); i++) {
-                    //    int id = sensor_fusion[i][0];
-                    //    double s = sensor_fusion[i][5];
-                    //    double d = sensor_fusion[i][6];
-                    //    double vx = sensor_fusion[i][3];
-                    //    double vy = sensor_fusion[i][4];
-                    //}
-
-                    // ...
-                    //void update_sensor_fusion(vector< vector<double>> sensor_fusion, int index, long long time_difference_b) {
-                    //    this->sf_x = sensor_fusion[index][1];
-                    //    this->sf_y = sensor_fusion[index][2];
-
-                    // ... end of from slack
-
+                    vector<sDynamicObject> dynamicObjects = ReadDynamicObjects(sensorFusion);
 
                     // code from walkthrough video
                     size_t prev_size = previousPath.x.size();
@@ -116,28 +99,28 @@ int main()
 
                     bool too_close = false;
 
-                    // sensor_fusion: list of other cars on the highway?!?
-                    // to avoid hitting other cars: go through sensor_fusion list and check if 
+                    // sensorFusion: list of other cars on the highway?!?
+                    // to avoid hitting other cars: go through sensorFusion list and check if 
                     // another car is in our lane
                     // if yes: check how close
                     
                     // find rev_v to use
                     // i is index of other car on the road 
-                    for (size_t i(0); i < sensor_fusion.size(); ++i)
+                    for (size_t i(0); i < sensorFusion.size(); ++i)
                     {
                         // car is in my lane
                         // d is position of i-th car on the road
                         // d tells us on what lane the other car is
-                        double d = sensor_fusion[i][6]; 
+                        double d = sensorFusion[i][6]; 
 
                         // lane is our lane 
                         if (d < (2 + 4 * lane + 2) && d >(2 + 4 * lane - 2))
                         {
                             // so the car is in our lane
-                            double vx = sensor_fusion[i][3];
-                            double vy = sensor_fusion[i][4];
+                            double vx = sensorFusion[i][3];
+                            double vy = sensorFusion[i][4];
                             double check_speed = sqrt(vx * vx + vy * vy);
-                            double check_car_s = sensor_fusion[i][5];
+                            double check_car_s = sensorFusion[i][5];
 
                             // check_car_s can help us to predict where that car is in the future  
                             check_car_s += ((double)prev_size * 0.2 * check_speed); // if using previous points can project s value out
