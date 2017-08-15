@@ -42,7 +42,7 @@ int main()
 {
     uWS::Hub uwsHub;
 
-    sMap map = ReadMapFile();
+    sMap waypointMap = ReadMapFile();
 
     // lane 0 is left, 1 is middle, 2 is right lane
     // start in middle lane:
@@ -53,7 +53,7 @@ int main()
     double ref_vel = 0.0; // mph <- start slow and increase velocity
 
     uwsHub.onMessage(
-        [&map, &lane, &ref_vel]
+        [&waypointMap, &lane, &ref_vel]
         (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
     {
         // "42" at the start of the message means there's a websocket message event.
@@ -230,11 +230,11 @@ int main()
 
                     // in frenet frame add evenly 30m spaced points ahead of the starting reference
                     vector<double> next_wp0 = getXY(car_s + 30, (2 + 4 * lane),
-                        map.map_waypoints_s, map.map_waypoints_x, map.map_waypoints_y);
+                        waypointMap.map_waypoints_s, waypointMap.map_waypoints_x, waypointMap.map_waypoints_y);
                     vector<double> next_wp1 = getXY(car_s + 60, (2 + 4 * lane),
-                        map.map_waypoints_s, map.map_waypoints_x, map.map_waypoints_y);
+                        waypointMap.map_waypoints_s, waypointMap.map_waypoints_x, waypointMap.map_waypoints_y);
                     vector<double> next_wp2 = getXY(car_s + 90, (2 + 4 * lane),
-                        map.map_waypoints_s, map.map_waypoints_x, map.map_waypoints_y);
+                        waypointMap.map_waypoints_s, waypointMap.map_waypoints_x, waypointMap.map_waypoints_y);
 
                     ptsx.push_back(next_wp0[0]);
                     ptsx.push_back(next_wp1[0]);
@@ -322,7 +322,7 @@ int main()
                     //    double next_s = car_s + (i + 1) * dist_inc;
                     //    double next_d = 6; // related to the width of the road and the position of waypoints
                     //    vector<double> xy = getXY(next_s, next_d,
-                    //        map.map_waypoints_s, map.map_waypoints_x, map.map_waypoints_y);
+                    //        waypointMap.map_waypoints_s, waypointMap.map_waypoints_x, waypointMap.map_waypoints_y);
 
                     //    // straight path
                     //    //next_x_vals.push_back(car_x + (dist_inc * i) * cos(deg2rad(car_yaw)));
