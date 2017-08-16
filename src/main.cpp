@@ -13,6 +13,7 @@
 #include "ego.h"
 #include "conversion_helpers.h"
 #include "simulator_message_reader.h"
+#include "speed_planner.h"
 #include "waypoint_map.h"
 
 
@@ -90,71 +91,18 @@ int main()
                     vector<sDynamicObject> dynamicObjects = ReadDynamicObjects(sensorFusion);
 
                     // code from walkthrough video
-                    size_t prev_size = previousPath.x.size();
+                    size_t prevPathSize = previousPath.x.size();
 
-                    if (prev_size > 0)
+                    if (prevPathSize > 0)
                     {
                         ego.s = previousPath.endS;
                     }
 
-                    bool too_close = false;
-
-                    // sensorFusion: list of other cars on the highway?!?
-                    // to avoid hitting other cars: go through sensorFusion list and check if 
-                    // another car is in our lane
-                    // if yes: check how close
-                    
-                    // find rev_v to use
-                    // i is index of other car on the road 
-                    for (size_t i(0); i < sensorFusion.size(); ++i)
-                    {
-                        // car is in my lane
-                        // d is position of i-th car on the road
-                        // d tells us on what lane the other car is
-                        double d = sensorFusion[i][6]; 
-
-                        // lane is our lane 
-                        if (d < (2 + 4 * lane + 2) && d >(2 + 4 * lane - 2))
-                        {
-                            // so the car is in our lane
-                            double vx = sensorFusion[i][3];
-                            double vy = sensorFusion[i][4];
-                            double check_speed = sqrt(vx * vx + vy * vy);
-                            double check_car_s = sensorFusion[i][5];
-
-                            // check_car_s can help us to predict where that car is in the future  
-                            check_car_s += ((double)prev_size * 0.2 * check_speed); // if using previous points can project s value out
-                            
-                            // check s values greater than mine and s gap
-                            if ((check_car_s > ego.s) && (check_car_s - ego.s) < 30)
-                            {
-                                // check if our car is close to the other car -> if so, need to take action
-
-                                // do some logic here, lower reference velocity so we dont crash into the car in front of us,
-                                // could also flag to try to change lanes
-                                
-                                // ref_vel = 29.5; // mph
-
-                                // lines below consider this flag and reduce speed
-                                too_close = true;
-                                if (lane > 0)
-                                {
-                                    lane = 0;
-                                }
-                            }
-                        }
-                    }
-
-
-                    if (too_close)
-                    {
-                        ref_vel -= 0.224; // this is somehow related to decelerating with 5 m/s^2
-                    }
-                    else if (ref_vel < 49.5)
-                    {
-                        ref_vel += 0.224;
-                    }
-
+                    ref_vel = CalculateReferenceSpeed(
+                        dynamicObjects,
+                        lane,
+                        ego,
+                        prevPathSize);
 
                     // create a list of widely spred (x, y) waypoints, evenly spaced at 30 m
                     // later we will interpolate these waypoints with a spline and fill it in
@@ -171,7 +119,7 @@ int main()
                     double ref_yaw = deg2rad(ego.yaw);
 
                     // if previous size is almost empty, use the car as starting reference
-                    if (prev_size < 2)
+                    if (prevPathSize < 2)
                     {
                         // use two points that make the path tangent to the car
                         double prev_car_x = ego.x - cos(ego.yaw);
@@ -188,11 +136,11 @@ int main()
                         // use the previous path's end point as starting reference
 
                         // redefine reference state as previous path end point
-                        ref_x = previousPath.x[prev_size - 1];
-                        ref_y = previousPath.y[prev_size - 1];
+                        ref_x = previousPath.x[prevPathSize - 1];
+                        ref_y = previousPath.y[prevPathSize - 1];
 
-                        double ref_x_prev = previousPath.x[prev_size - 2];
-                        double ref_y_prev = previousPath.y[prev_size - 2];
+                        double ref_x_prev = previousPath.x[prevPathSize - 2];
+                        double ref_y_prev = previousPath.y[prevPathSize - 2];
                         ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
 
                         // use two points that make the path tangent to the previous path's end point

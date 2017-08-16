@@ -17,6 +17,7 @@ set(sources
     src/main.cpp
     src/path.h
     src/simulator_message_reader.h
+    src/speed_planner.h
     src/spline.h
     src/waypoint_map.h
 )
