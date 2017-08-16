@@ -10,10 +10,10 @@
 #include "json.hpp"
 #include "spline.h" // used to smooth out edgy path from waypoints
 
+#include "behavior_planner.h"
 #include "ego.h"
 #include "conversion_helpers.h"
 #include "simulator_message_reader.h"
-#include "speed_planner.h"
 #include "waypoint_map.h"
 
 
@@ -104,7 +104,8 @@ int main()
                         ego,
                         prevPathSize);
 
-                    // create a list of widely spred (x, y) waypoints, evenly spaced at 30 m
+
+                    // create a list of widely spread (x, y) waypoints, evenly spaced at 30 m
                     // later we will interpolate these waypoints with a spline and fill it in
                     // with more points that control speed
 

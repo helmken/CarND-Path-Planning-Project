@@ -1,5 +1,5 @@
-#ifndef SPEED_PLANNER_H
-#define SPEED_PLANNER_H
+#ifndef BEHAVIOR_PLANNER_H
+#define BEHAVIOR_PLANNER_H
 
 #include <vector>
 
@@ -75,4 +75,4 @@ double CalculateReferenceSpeed(
     return referenceSpeed;
 }
 
-#endif // SPEED_PLANNER_H
+#endif // BEHAVIOR_PLANNER_H
