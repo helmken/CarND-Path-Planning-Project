@@ -11,6 +11,7 @@ set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
 set(sources
     src/behavior_planner.h
+    src/behavior_planner.cpp
     src/conversion_helpers.h
     src/dynamic_object.h
     src/ego.h

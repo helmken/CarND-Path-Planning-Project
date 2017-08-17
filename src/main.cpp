@@ -309,7 +309,8 @@ int main()
     });
 
     int port = 4567;
-    if (uwsHub.listen(port))
+    //if (uwsHub.listen(port))
+    if (uwsHub.listen("127.0.0.1", port))
     {
         std::cout << "Listening to port " << port << std::endl;
     }
