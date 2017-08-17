@@ -11,6 +11,9 @@ struct sDynamicObject
     double s;
     double d;
 
+    sDynamicObject()
+    {};
+
     sDynamicObject(
         int id,
         double x,
