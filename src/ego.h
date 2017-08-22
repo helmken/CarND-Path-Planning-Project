@@ -1,6 +1,10 @@
 #ifndef EGO_H
 #define EGO_H
 
+
+// jwdunn1 [00:34]
+// The "collider" on the car measures 4.47x2.43
+
 struct sEgo
 {
     double x; // cartesian x coordinate

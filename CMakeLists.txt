@@ -12,14 +12,18 @@ set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 set(sources
     src/behavior_planner.h
     src/behavior_planner.cpp
+    src/conversion_helpers.cpp
     src/conversion_helpers.h
     src/dynamic_object.h
     src/ego.h
     src/json.hpp
     src/main.cpp
     src/path.h
+    src/path_generator.cpp
+    src/path_generator.h
     src/simulator_message_reader.h
     src/spline.h
+    src/waypoint_map.cpp
     src/waypoint_map.h
 )
 

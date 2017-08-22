@@ -2,19 +2,10 @@
 #define CONVERSION_HELPERS_H
 
 // For converting back and forth between radians and degrees.
-constexpr double pi()
-{
-    return M_PI;
-}
+constexpr double pi();
 
-double deg2rad(double x)
-{
-    return x * pi() / 180;
-}
+double deg2rad(double x);
 
-double rad2deg(double x)
-{
-    return x * 180 / pi();
-}
+double rad2deg(double x);
 
 #endif // CONVERSION_HELPERS_H

@@ -8,6 +8,9 @@ struct sPath
     double endS; // frenet s end coordinate
     double endD; // frenet d end coordinate
 
+    sPath()
+    {};
+
     sPath(
         const std::vector<double>& x,
         const std::vector<double>& y,
