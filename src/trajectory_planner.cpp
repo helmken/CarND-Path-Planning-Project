@@ -50,6 +50,7 @@ sPath GeneratePath(
     // if previous size is almost empty, use the car as starting reference
     if (prevPathSize < 2)
     {
+        // happens at the start of simulation...
         // use two points that make the path tangent to the car
         double prev_car_x = ego.x - cos(ego.yaw);
         double prev_car_y = ego.y - sin(ego.yaw);
@@ -123,26 +124,19 @@ sPath GeneratePath(
     }
 
     // create a spline
-    tk::spline s;
+    tk::spline pathSpline;
 
     // set (x, y) points to the spline
-    s.set_points(ptsx, ptsy);
+    pathSpline.set_points(ptsx, ptsy);
 
     // define the actual (x, y) points we will use for the planner
-    vector<double> next_x_vals;
-    vector<double> next_y_vals;
-
     // start with all of the previous path points from last time
-    for (size_t i(0); i < previousPath.coordsX.size(); ++i)
-    {
-        next_x_vals.push_back(previousPath.coordsX[i]);
-        next_y_vals.push_back(previousPath.coordsY[i]);
-    }
+    sPath newPath = previousPath;
 
     // calculate how to break up spline points so that we travel
     // at our desired reference velocity
     double target_x = 30.0;
-    double target_y = s(target_x);
+    double target_y = pathSpline(target_x);
     double target_dist = sqrt(target_x * target_x + target_y * target_y);
 
     double x_add_on = 0;
@@ -153,7 +147,7 @@ sPath GeneratePath(
     {
         double N = (target_dist / (0.2 * referenceVelocity / 2.24)); // 2.24 mph -> m/s
         double x_point = x_add_on + target_x / N;
-        double y_point = s(x_point);
+        double y_point = pathSpline(x_point);
 
         x_add_on = x_point;
 
@@ -167,43 +161,9 @@ sPath GeneratePath(
         x_point += ref_x;
         y_point += ref_y;
 
-        next_x_vals.push_back(x_point);
-        next_y_vals.push_back(y_point);
+        newPath.coordsX.push_back(x_point);
+        newPath.coordsY.push_back(y_point);
     }
-
-
-    //vector<double> next_x_vals;
-    //vector<double> next_y_vals;
-
-
-    //// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-    //// code from walkthrough video
-    ////double dist_inc(0.5); // related to speed 50 mph
-    //double dist_inc(0.3); // reducing this value results in lower average speed
-    //for (int i(0); i < 50; ++i)
-    //{
-    //    // use frenet to stay in the lane
-    //    double next_s = ego.s + (i + 1) * dist_inc;
-    //    double next_d = 6; // related to the width of the road and the position of waypoints
-    //    vector<double> xy = getXY(next_s, next_d,
-    //        waypointMap.map_waypoints_s, waypointMap.map_waypoints_x, waypointMap.map_waypoints_y);
-
-    //    // straight path
-    //    //next_x_vals.push_back(car_x + (dist_inc * i) * cos(deg2rad(car_yaw)));
-    //    //next_y_vals.push_back(car_y + (dist_inc * i) * sin(deg2rad(car_yaw)));
-
-    //    // use frenet - with this, the car stays in its lane
-    //    next_x_vals.push_back(xy[0]);
-    //    next_y_vals.push_back(xy[1]);
-
-    //}
-    //// ... end of code from walkthrough video
-
-
-
-    sPath newPath;
-    newPath.coordsX = next_x_vals;
-    newPath.coordsY = next_y_vals;
 
     return newPath;
 }
