@@ -9,10 +9,30 @@ cPathPlanner::cPathPlanner()
     m_trajectoryPlanner = new cTrajectoryPlanner();
 
     m_behaviorPlanner->Init(m_trajectoryPlanner);
-    //m_trajectoryPlanner->Init()
+    m_trajectoryPlanner->Init();
 }
 
-void cPathPlanner::Execute() // TODO: input parameters
+sPath cPathPlanner::Execute(
+    const sEgo& ego,
+    const std::vector<sDynamicObject>& dynamicObjects,
+    const sPath& previousPath,
+    const sMap& waypointMap)
 {
+    size_t prevPathSize = previousPath.x.size();
+    
+    sEgo targetEgoPos = ego;
+    if (prevPathSize > 0)
+    {
+        targetEgoPos.s = previousPath.endS;
+    }
 
+    int lane = 1;
+
+    double ref_vel = CalculateReferenceSpeed(
+        dynamicObjects,
+        lane,
+        ego,
+        prevPathSize);
+
+    return GeneratePath(ego, waypointMap, previousPath, lane, ref_vel);
 }

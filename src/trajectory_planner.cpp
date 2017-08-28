@@ -20,7 +20,7 @@ void cTrajectoryPlanner::Init()
 
 void cTrajectoryPlanner::Execute()
 {
-
+    // TODO: use code from lesson 24
 }
 
 

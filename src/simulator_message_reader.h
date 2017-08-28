@@ -45,7 +45,7 @@ sDynamicObject ReadDynamicObject(const nlohmann::json& sensorFusion)
     return dynamicObj;
 }
 
-std::vector<sDynamicObject> ReadDynamicObjects(const nlohmann::json& sensorFusion)
+std::vector<sDynamicObject> ReadDynamicObjectsFromJson(const nlohmann::json& sensorFusion)
 {
     std::vector<sDynamicObject> dynamicObjects;
     for (size_t i(0); i < sensorFusion.size(); ++i)

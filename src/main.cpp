@@ -12,6 +12,7 @@
 #include "behavior_planner.h"
 #include "ego.h"
 #include "conversion_helpers.h"
+#include "path_planner.h"
 #include "trajectory_planner.h"
 #include "simulator_message_reader.h"
 #include "waypoint_map.h"
@@ -56,8 +57,10 @@ int main()
     // double ref_vel = 49.5; // mph <- the high speed value causes a big jerk at initialization
     double ref_vel = 0.0; // mph <- start slow and increase velocity
 
+    cPathPlanner pathPlanner;
+
     uwsHub.onMessage(
-        [&waypointMap, &lane, &ref_vel]
+        [&waypointMap, &lane, &ref_vel, &pathPlanner]
         (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
     {
         // "42" at the start of the message means there's a websocket message event.
@@ -82,29 +85,19 @@ int main()
                     // Main car's localization Data
                     sEgo ego = ReadEgoFromJson(telemetry);
 
-                    // Previous path data given to the Planner
-                    sPath previousPath = ReadPathFromJson(telemetry);
-
                     // Sensor Fusion Data, a list of all other cars on the same side of the road.
                     json sensorFusion = telemetry["sensor_fusion"];
 
-                    vector<sDynamicObject> dynamicObjects = ReadDynamicObjects(sensorFusion);
+                    vector<sDynamicObject> dynamicObjects = ReadDynamicObjectsFromJson(sensorFusion);
 
-                    // code from walkthrough video
-                    size_t prevPathSize = previousPath.x.size();
+                    // Previous path data given to the Planner
+                    sPath previousPath = ReadPathFromJson(telemetry);
 
-                    if (prevPathSize > 0)
-                    {
-                        ego.s = previousPath.endS;
-                    }
-
-                    ref_vel = CalculateReferenceSpeed(
-                        dynamicObjects,
-                        lane,
-                        ego,
-                        prevPathSize);
-
-                    sPath newPath = GeneratePath(ego, waypointMap, previousPath, lane, ref_vel);
+                    sPath newPath = pathPlanner.Execute(
+                        ego, 
+                        dynamicObjects, 
+                        previousPath, 
+                        waypointMap);
 
                     json msgJson;
                     msgJson["next_x"] = newPath.x;

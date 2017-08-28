@@ -2,6 +2,10 @@
 #define PATH_PLANNER_H
 
 
+#include "path.h"
+#include "waypoint_map.h"
+
+
 class cTrajectoryPlanner;
 class cBehaviorPlanner;
 
@@ -23,7 +27,11 @@ public:
     /**
      * Delegate inputs to modules.
      */
-    void Execute(); // TODO: input parameters
+    sPath Execute(
+        const sEgo& ego,
+        const std::vector<sDynamicObject>& dynamicObjects,
+        const sPath& previousPath,
+        const sMap& waypointMap);
 
 private:
     cTrajectoryPlanner* m_trajectoryPlanner;
