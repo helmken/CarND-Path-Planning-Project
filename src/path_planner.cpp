@@ -12,13 +12,23 @@ cPathPlanner::cPathPlanner()
     m_trajectoryPlanner->Init();
 }
 
+cPathPlanner::~cPathPlanner()
+{
+    delete m_behaviorPlanner;
+    delete m_trajectoryPlanner;
+}
+
+void cPathPlanner::Init()
+{
+    m_waypointMap = ReadMapFile();
+}
+
 sPath cPathPlanner::Execute(
     const sEgo& ego,
     const std::vector<sDynamicObject>& dynamicObjects,
-    const sPath& previousPath,
-    const sMap& waypointMap)
+    const sPath& previousPath)
 {
-    size_t prevPathSize = previousPath.x.size();
+    size_t prevPathSize = previousPath.coordsX.size();
     
     sEgo targetEgoPos = ego;
     if (prevPathSize > 0)
@@ -34,5 +44,5 @@ sPath cPathPlanner::Execute(
         ego,
         prevPathSize);
 
-    return GeneratePath(ego, waypointMap, previousPath, lane, ref_vel);
+    return GeneratePath(ego, m_waypointMap, previousPath, lane, ref_vel);
 }

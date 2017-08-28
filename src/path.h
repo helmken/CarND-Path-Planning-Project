@@ -3,8 +3,8 @@
 
 struct sPath
 {
-    std::vector<double> x; // cartesian x coordinates
-    std::vector<double> y; // cartesian y coordinates
+    std::vector<double> coordsX; // cartesian x coordinates
+    std::vector<double> coordsY; // cartesian y coordinates
     double endS; // frenet s end coordinate
     double endD; // frenet d end coordinate
 
@@ -12,11 +12,12 @@ struct sPath
     {};
 
     sPath(
-        const std::vector<double>& x,
-        const std::vector<double>& y,
+        const std::vector<double>& coordsX,
+        const std::vector<double>& coordsY,
         const double endS,
         const double endD)
-        : x(x), y(y), endS(endS), endD(endD)
+        : coordsX(coordsX), coordsY(coordsY)
+        , endS(endS), endD(endD)
     {
     };
 };

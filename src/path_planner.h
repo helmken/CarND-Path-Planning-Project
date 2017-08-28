@@ -2,6 +2,7 @@
 #define PATH_PLANNER_H
 
 
+#include "dynamic_object.h"
 #include "path.h"
 #include "waypoint_map.h"
 
@@ -24,18 +25,22 @@ public:
      */
     cPathPlanner();
 
+    ~cPathPlanner();
+
+    void Init();
+
     /**
      * Delegate inputs to modules.
      */
     sPath Execute(
         const sEgo& ego,
         const std::vector<sDynamicObject>& dynamicObjects,
-        const sPath& previousPath,
-        const sMap& waypointMap);
+        const sPath& previousPath);
 
 private:
     cTrajectoryPlanner* m_trajectoryPlanner;
     cBehaviorPlanner* m_behaviorPlanner;
+    sMap m_waypointMap;
 };
 
 #endif //PATH_PLANNER_H

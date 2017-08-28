@@ -9,13 +9,9 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 
-#include "behavior_planner.h"
 #include "ego.h"
-#include "conversion_helpers.h"
 #include "path_planner.h"
-#include "trajectory_planner.h"
 #include "simulator_message_reader.h"
-#include "waypoint_map.h"
 
 
 using namespace std;
@@ -47,20 +43,11 @@ int main()
 {
     uWS::Hub uwsHub;
 
-    sMap waypointMap = ReadMapFile();
-
-    // lane 0 is left, 1 is middle, 2 is right lane
-    // start in middle lane:
-    int lane = 1;
-
-    // have a reference velocity to target
-    // double ref_vel = 49.5; // mph <- the high speed value causes a big jerk at initialization
-    double ref_vel = 0.0; // mph <- start slow and increase velocity
-
     cPathPlanner pathPlanner;
+    pathPlanner.Init();
 
     uwsHub.onMessage(
-        [&waypointMap, &lane, &ref_vel, &pathPlanner]
+        [&pathPlanner]
         (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
     {
         // "42" at the start of the message means there's a websocket message event.
@@ -96,12 +83,11 @@ int main()
                     sPath newPath = pathPlanner.Execute(
                         ego, 
                         dynamicObjects, 
-                        previousPath, 
-                        waypointMap);
+                        previousPath);
 
                     json msgJson;
-                    msgJson["next_x"] = newPath.x;
-                    msgJson["next_y"] = newPath.y;
+                    msgJson["next_x"] = newPath.coordsX;
+                    msgJson["next_y"] = newPath.coordsY;
 
                     auto msg = "42[\"control\"," + msgJson.dump() + "]";
 

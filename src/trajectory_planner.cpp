@@ -45,7 +45,7 @@ sPath GeneratePath(
     double ref_y = ego.y;
     double ref_yaw = deg2rad(ego.yaw);
 
-    size_t prevPathSize = previousPath.x.size();
+    size_t prevPathSize = previousPath.coordsX.size();
 
     // if previous size is almost empty, use the car as starting reference
     if (prevPathSize < 2)
@@ -65,11 +65,11 @@ sPath GeneratePath(
         // use the previous path's end point as starting reference
 
         // redefine reference state as previous path end point
-        ref_x = previousPath.x[prevPathSize - 1];
-        ref_y = previousPath.y[prevPathSize - 1];
+        ref_x = previousPath.coordsX[prevPathSize - 1];
+        ref_y = previousPath.coordsY[prevPathSize - 1];
 
-        double ref_x_prev = previousPath.x[prevPathSize - 2];
-        double ref_y_prev = previousPath.y[prevPathSize - 2];
+        double ref_x_prev = previousPath.coordsX[prevPathSize - 2];
+        double ref_y_prev = previousPath.coordsY[prevPathSize - 2];
         ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
 
         // use two points that make the path tangent to the previous path's end point
@@ -133,10 +133,10 @@ sPath GeneratePath(
     vector<double> next_y_vals;
 
     // start with all of the previous path points from last time
-    for (size_t i(0); i < previousPath.x.size(); ++i)
+    for (size_t i(0); i < previousPath.coordsX.size(); ++i)
     {
-        next_x_vals.push_back(previousPath.x[i]);
-        next_y_vals.push_back(previousPath.y[i]);
+        next_x_vals.push_back(previousPath.coordsX[i]);
+        next_y_vals.push_back(previousPath.coordsY[i]);
     }
 
     // calculate how to break up spline points so that we travel
@@ -149,7 +149,7 @@ sPath GeneratePath(
 
     // fill up the rest of our path planner after filling it with previous points,
     // here we will always output 50 points
-    for (size_t i(1); i <= 50 - previousPath.x.size(); ++i)
+    for (size_t i(1); i <= 50 - previousPath.coordsX.size(); ++i)
     {
         double N = (target_dist / (0.2 * referenceVelocity / 2.24)); // 2.24 mph -> m/s
         double x_point = x_add_on + target_x / N;
@@ -202,8 +202,8 @@ sPath GeneratePath(
 
 
     sPath newPath;
-    newPath.x = next_x_vals;
-    newPath.y = next_y_vals;
+    newPath.coordsX = next_x_vals;
+    newPath.coordsY = next_y_vals;
 
     return newPath;
 }
