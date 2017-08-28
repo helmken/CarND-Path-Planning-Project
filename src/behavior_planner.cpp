@@ -18,7 +18,7 @@ const double distanceKeepLane(30.0);
 
 cBehaviorPlanner::cBehaviorPlanner()
     : m_egoState(ES_LANE_KEEP)
-    //TODO: , m_trajectoryPlanner(nullptr)
+    , m_trajectoryPlanner(nullptr)
 {
 
 }
@@ -69,9 +69,8 @@ bool sLaneInfo::IsWithinLaneBoundaries(const double d)
 
 double CalculateReferenceSpeed(
     const std::vector<sDynamicObject>& dynamicObjects, 
-    int& egoLane,
-    const sEgo& ego,
-    std::size_t prevPathSize)
+    int& targetLane,
+    const sEgo& ego)
 {
     bool too_close = false;
 
@@ -87,6 +86,7 @@ double CalculateReferenceSpeed(
         ego.s,
         roadInfo);
 
+    targetLane = 1;
 
     if (StayOnCurrentLane(roadInfo, ego))
     {
@@ -101,7 +101,7 @@ double CalculateReferenceSpeed(
         const eLaneChangeDirection changeDir =
             SelectLaneChangeDirection(roadInfo, ego);
 
-        egoLane = GetLaneIdxFromLaneChangeDirection(changeDir, ego);
+        targetLane = GetLaneIdxFromLaneChangeDirection(changeDir, ego);
     }
 
     //// code from walkthrough

@@ -28,21 +28,19 @@ sPath cPathPlanner::Execute(
     const std::vector<sDynamicObject>& dynamicObjects,
     const sPath& previousPath)
 {
-    size_t prevPathSize = previousPath.coordsX.size();
-    
-    sEgo targetEgoPos = ego;
-    if (prevPathSize > 0)
-    {
-        targetEgoPos.s = previousPath.endS;
-    }
-
-    int lane = 1;
+    int targetLane = 1;
 
     double ref_vel = CalculateReferenceSpeed(
         dynamicObjects,
-        lane,
-        ego,
-        prevPathSize);
-
-    return GeneratePath(ego, m_waypointMap, previousPath, lane, ref_vel);
+        targetLane,
+        ego);
+    
+    sPath newPath = GeneratePath(
+        ego, 
+        m_waypointMap, 
+        previousPath, 
+        targetLane, 
+        ref_vel);
+    
+    return newPath;
 }

@@ -94,8 +94,7 @@ private:
 double CalculateReferenceSpeed(
     const std::vector<sDynamicObject>& dynamicObjects,
     int& egoLane,
-    const sEgo& ego,
-    std::size_t prevPathSize);
+    const sEgo& ego);
 
 void AnalyseRoadSituation(
     const std::vector<sDynamicObject>& dynamicObjects,
