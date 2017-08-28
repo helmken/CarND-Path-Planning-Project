@@ -6,6 +6,23 @@
 #include "waypoint_map.h"
 
 
+/**
+ * Generate trajectory considering
+ * - target speed 
+ * - avoiding collisions
+ * - smooth: avoid longitudinal/lateral jerks
+ * - safe: maintain safety distance
+ */
+class cTrajectoryPlanner
+{
+public:
+    cTrajectoryPlanner();
+    void Init(); // TODO: input
+    void Execute(); // TODO: input
+
+private:
+};
+
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
 std::vector<double> getFrenet(
     double x, double y, double theta,

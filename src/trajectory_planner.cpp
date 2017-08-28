@@ -8,6 +8,22 @@
 using namespace std;
 
 
+cTrajectoryPlanner::cTrajectoryPlanner()
+{
+
+}
+
+void cTrajectoryPlanner::Init()
+{
+
+}
+
+void cTrajectoryPlanner::Execute()
+{
+
+}
+
+
 sPath GeneratePath(
     const sEgo& ego, 
     const sMap& waypointMap, 

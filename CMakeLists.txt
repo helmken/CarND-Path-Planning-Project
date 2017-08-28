@@ -19,6 +19,8 @@ set(sources
     src/json.hpp
     src/main.cpp
     src/path.h
+    src/path_planner.cpp
+    src/path_planner.h
     src/trajectory_planner.cpp
     src/trajectory_planner.h
     src/simulator_message_reader.h
