@@ -1,5 +1,5 @@
-#ifndef PATH_GENERATOR_H
-#define PATH_GENERATOR_H
+#ifndef TRAJECTORY_PLANNER_H
+#define TRAJECTORY_PLANNER_H
 
 #include "path.h"
 #include "ego.h"
@@ -28,4 +28,4 @@ sPath GeneratePath(
     const double referenceVelocity);
 
 
-#endif // PATH_GENERATOR_H
+#endif // TRAJECTORY_PLANNER_H

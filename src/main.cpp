@@ -12,7 +12,7 @@
 #include "behavior_planner.h"
 #include "ego.h"
 #include "conversion_helpers.h"
-#include "path_generator.h"
+#include "trajectory_planner.h"
 #include "simulator_message_reader.h"
 #include "waypoint_map.h"
 

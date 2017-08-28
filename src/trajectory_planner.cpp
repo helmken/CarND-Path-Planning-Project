@@ -1,7 +1,7 @@
 #include <vector>
 
 #include "conversion_helpers.h"
-#include "path_generator.h"
+#include "trajectory_planner.h"
 #include "spline.h" // used to smooth out edgy path from waypoints
 
 
