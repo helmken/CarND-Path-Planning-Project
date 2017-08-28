@@ -6,6 +6,27 @@
 #include "waypoint_map.h"
 
 
+struct s2DCoordCart
+{
+    double x;
+    double y;
+
+    s2DCoordCart(double x, double y)
+        : x(x), y(y)
+    {};
+};
+
+struct s2DCoordFrenet
+{
+    double s;
+    double d;
+
+    s2DCoordFrenet(double s, double d)
+        : s(s), d(d)
+    {};
+};
+
+
 /**
  * Generate trajectory considering
  * - target speed 
@@ -24,14 +45,14 @@ private:
 };
 
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-std::vector<double> getFrenet(
+s2DCoordFrenet getFrenet(
     double x, double y, double theta,
     std::vector<double> maps_x,
     std::vector<double> maps_y);
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
 // TODO: according to slack getXY should not be used - instead splines should be used
-std::vector<double> getXY(
+s2DCoordCart getXY(
     double s, double d,
     std::vector<double> maps_s,
     std::vector<double> maps_x,

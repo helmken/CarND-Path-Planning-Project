@@ -82,34 +82,34 @@ sPath GeneratePath(
     }
 
     // in frenet frame add evenly 30m spaced points ahead of the starting reference
-    vector<double> next_wp0 = getXY(
+    s2DCoordCart next_wp0 = getXY(
         ego.s + 30,
         (2 + 4 * lane),
         waypointMap.map_waypoints_s,
         waypointMap.map_waypoints_x,
         waypointMap.map_waypoints_y);
 
-    vector<double> next_wp1 = getXY(
+    s2DCoordCart next_wp1 = getXY(
         ego.s + 60,
         (2 + 4 * lane),
         waypointMap.map_waypoints_s,
         waypointMap.map_waypoints_x,
         waypointMap.map_waypoints_y);
 
-    vector<double> next_wp2 = getXY(
+    s2DCoordCart next_wp2 = getXY(
         ego.s + 90,
         (2 + 4 * lane),
         waypointMap.map_waypoints_s,
         waypointMap.map_waypoints_x,
         waypointMap.map_waypoints_y);
 
-    ptsx.push_back(next_wp0[0]);
-    ptsx.push_back(next_wp1[0]);
-    ptsx.push_back(next_wp2[0]);
+    ptsx.push_back(next_wp0.x);
+    ptsx.push_back(next_wp1.x);
+    ptsx.push_back(next_wp2.x);
 
-    ptsy.push_back(next_wp0[1]);
-    ptsy.push_back(next_wp1[1]);
-    ptsy.push_back(next_wp2[1]);
+    ptsy.push_back(next_wp0.y);
+    ptsy.push_back(next_wp1.y);
+    ptsy.push_back(next_wp2.y);
 
     // transformation to local car coordinates
     for (size_t i(0); i < ptsx.size(); ++i)
@@ -169,7 +169,7 @@ sPath GeneratePath(
 }
 
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-std::vector<double> getFrenet(
+s2DCoordFrenet getFrenet(
     double x, double y, double theta,
     std::vector<double> maps_x,
     std::vector<double> maps_y)
@@ -216,12 +216,13 @@ std::vector<double> getFrenet(
 
     frenet_s += distance(0, 0, proj_x, proj_y);
 
-    return { frenet_s, frenet_d };
+    return s2DCoordFrenet(frenet_s, frenet_d);
+    //return { frenet_s, frenet_d };
 }
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
 // TODO: according to slack getXY should not be used - instead splines should be used
-std::vector<double> getXY(
+s2DCoordCart getXY(
     double s, double d,
     std::vector<double> maps_s,
     std::vector<double> maps_x,
@@ -237,6 +238,7 @@ std::vector<double> getXY(
     int wp2 = (prev_wp + 1) % maps_x.size();
 
     double heading = atan2((maps_y[wp2] - maps_y[prev_wp]), (maps_x[wp2] - maps_x[prev_wp]));
+    
     // the x,y,s along the segment
     double seg_s = (s - maps_s[prev_wp]);
 
@@ -248,5 +250,5 @@ std::vector<double> getXY(
     double x = seg_x + d*cos(perp_heading);
     double y = seg_y + d*sin(perp_heading);
 
-    return { x, y };
+    return s2DCoordCart(x, y);
 }
