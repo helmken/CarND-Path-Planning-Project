@@ -67,10 +67,17 @@ void cVisualization::Draw(
 
         glClear(GL_COLOR_BUFFER_BIT);
 
-        const double surrounding(100);
+        double left, right, bottom, top;
+        //BoundingBoxOfPaths(
+        //    left, right, bottom, top,
+        //    previousPath, newPath);
+        BoundingBox(
+            left, right, bottom, top,
+            ego, dynamicObjects,
+            previousPath, newPath);
+
         SetupProjection(
-            ego.x - surrounding, ego.x + surrounding, 
-            ego.y - surrounding, ego.y + surrounding, 
+            left, right, bottom, top,
             ratio, 5.0);
 
         DrawEgo(ego);
@@ -83,7 +90,7 @@ void cVisualization::Draw(
     }
 }
 
-void cVisualization::GetBoundingBox(
+void cVisualization::BoundingBox(
     double& left, double& right,
     double& bottom, double& top,
     const sEgo& ego,
@@ -91,32 +98,101 @@ void cVisualization::GetBoundingBox(
     const sPath& previousPath,
     const sPath& newPath)
 {
-    const double areaSize(100);
-    left = ego.x - areaSize;
-    right = ego.x + areaSize;
-    bottom = ego.y - areaSize;
-    top = ego.y + areaSize;
+    left = ego.x;
+    right = ego.x;
+    bottom = ego.y;
+    top = ego.y;
 
-    //for (const sDynamicObject& obj : dynamicObjects)
-    //{
-    //    if (obj.x < left)
-    //    {
-    //        left = obj.x;
-    //    }
-    //    if (obj.x > right)
-    //    {
-    //        right = obj.x;
-    //    }
+    BoundingBoxDynamicObjects(
+        left, right, bottom, top, dynamicObjects);
 
-    //    if (obj.y < bottom)
-    //    {
-    //        bottom = obj.y;
-    //    }
-    //    if (obj.y > top)
-    //    {
-    //        top = obj.y;
-    //    }
-    //}
+    BoundingBoxSinglePath(
+        left, right, bottom, top, previousPath);
+    BoundingBoxSinglePath(
+        left, right, bottom, top, newPath);
+}
+
+void cVisualization::BoundingBoxDynamicObjects(
+    double& left, double& right,
+    double& bottom, double& top,
+    const std::vector<sDynamicObject>& dynamicObjects)
+{
+    for (const sDynamicObject& dynObj : dynamicObjects)
+    {
+        if (dynObj.x < left)
+        {
+            left = dynObj.x;
+        }
+        if (dynObj.x > right)
+        {
+            right = dynObj.x;
+        }
+
+        if (dynObj.y < bottom)
+        {
+            bottom = dynObj.y;
+        }
+        if (dynObj.y > top)
+        {
+            top = dynObj.y;
+        }
+    }
+}
+
+void cVisualization::BoundingBoxEgo(
+    double& left, double& right,
+    double& bottom, double& top,
+    const sEgo& ego)
+{
+    const double surrounding(100);
+    left = ego.x - surrounding;
+    right = ego.x + surrounding;
+    bottom = ego.y - surrounding;
+    top = ego.y + surrounding;
+}
+
+void cVisualization::BoundingBoxOfPaths(
+    double& left, double& right,
+    double& bottom, double& top,
+    const sPath& previousPath,
+    const sPath& newPath)
+{
+    left = std::numeric_limits<double>::max();
+    right = std::numeric_limits<double>::min();
+    bottom = std::numeric_limits<double>::max();
+    top = std::numeric_limits<double>::min();
+
+    BoundingBoxSinglePath(
+        left, right, bottom, top, previousPath);
+    BoundingBoxSinglePath(
+        left, right, bottom, top, newPath);
+}
+
+void cVisualization::BoundingBoxSinglePath(
+    double& left, double& right,
+    double& bottom, double& top,
+    const sPath& path)
+{
+    for (size_t i(0); i < path.coordsX.size(); ++i)
+    {
+        if (path.coordsX[i] < left)
+        {
+            left = path.coordsX[i];
+        }
+        if (path.coordsX[i] > right)
+        {
+            right = path.coordsX[i];
+        }
+
+        if (path.coordsY[i] < bottom)
+        {
+            bottom = path.coordsY[i];
+        }
+        if (path.coordsY[i] > top)
+        {
+            top = path.coordsY[i];
+        }
+    }
 }
 
 void cVisualization::DrawEgo(const sEgo& ego)
@@ -164,13 +240,13 @@ void cVisualization::DrawPath(const sPath& path, const bool isNewPath)
 {
     if (isNewPath)
     {
-        glPointSize(1.0);
-        glColor3f(1.0, 1.0, 1.0);
+        glPointSize(5.0);
+        glColor3f(0.0, 1.0, 0.0); // new path in green
     }
     else
     {
-        glPointSize(2.0);
-        glColor3f(0.5, 0.0, 1.0); // previous path
+        glPointSize(10.0);
+        glColor3f(1.0, 0.0, 0.0); // previous path in red
     }
 
     glBegin(GL_POINTS);

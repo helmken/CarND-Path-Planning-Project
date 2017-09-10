@@ -32,13 +32,34 @@ public:
         const sPath& previousPath,
         const sPath& newPath);
 
-    void GetBoundingBox(
-        double& left, double& right, 
+    void BoundingBox(
+        double& left, double& right,
         double& bottom, double& top,
         const sEgo& ego,
         const std::vector<sDynamicObject>& dynamicObjects,
         const sPath& previousPath,
         const sPath& newPath);
+
+    void BoundingBoxDynamicObjects(
+        double& left, double& right,
+        double& bottom, double& top,
+        const std::vector<sDynamicObject>& dynamicObjects);
+
+    void BoundingBoxEgo(
+        double& left, double& right, 
+        double& bottom, double& top,
+        const sEgo& ego);
+
+    void BoundingBoxOfPaths(
+        double& left, double& right,
+        double& bottom, double& top,
+        const sPath& previousPath,
+        const sPath& newPath);
+
+    void BoundingBoxSinglePath(
+        double& left, double& right,
+        double& bottom, double& top,
+        const sPath& path);
 
     void DrawEgo(const sEgo& ego);
     
