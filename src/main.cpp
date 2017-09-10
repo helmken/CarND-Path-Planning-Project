@@ -98,7 +98,11 @@ int main()
                     //this_thread::sleep_for(chrono::milliseconds(1000));
                     ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
-                    visualization.Draw();
+                    visualization.Draw(
+                        ego, 
+                        dynamicObjects,
+                        previousPath,
+                        newPath);
                 }
             }
             else 
