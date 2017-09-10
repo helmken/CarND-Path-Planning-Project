@@ -3,7 +3,7 @@ project(Path_Planning)
 cmake_minimum_required (VERSION 3.5)
 
 #add_definitions(-std=c++11 -O3 -DHAVE_STDDEF_H)
-add_definitions(-std=c++11 -g -DHAVE_STDDEF_H -D_USE_MATH_DEFINES)
+add_definitions(-std=c++11 -O0 -DHAVE_STDDEF_H -D_USE_MATH_DEFINES)
 
 
 set(CXX_FLAGS "-Wall")
@@ -25,6 +25,8 @@ set(sources
     src/trajectory_planner.h
     src/simulator_message_reader.h
     src/spline.h
+    src/visualization.cpp
+    src/visualization.h
     src/waypoint_map.cpp
     src/waypoint_map.h
 )
@@ -41,8 +43,10 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 include_directories(../../uWebSockets/src)
 include_directories(../../vcpkg/installed/x86-windows/include)
+include_directories(../../glfw/include)
 link_directories(../../uWebSockets/build_VS/Debug)
 link_directories(../../vcpkg/installed/x86-windows/lib)
+link_directories(../../glfw/build_VS/src/Debug)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 
 
@@ -66,5 +70,7 @@ target_link_libraries(path_planning
 	ssleay32 
 	libuv 
 	uWS
+    glfw3 
+    opengl32 	
 )
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")

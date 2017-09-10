@@ -12,6 +12,7 @@
 #include "ego.h"
 #include "path_planner.h"
 #include "simulator_message_reader.h"
+#include "visualization.h"
 
 
 using namespace std;
@@ -46,8 +47,11 @@ int main()
     cPathPlanner pathPlanner;
     pathPlanner.Init();
 
+    cVisualization visualization;
+    visualization.SetupGL();
+
     uwsHub.onMessage(
-        [&pathPlanner]
+        [&pathPlanner, &visualization]
         (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
     {
         // "42" at the start of the message means there's a websocket message event.
@@ -93,6 +97,8 @@ int main()
 
                     //this_thread::sleep_for(chrono::milliseconds(1000));
                     ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+                    visualization.Draw();
                 }
             }
             else 
@@ -105,8 +111,7 @@ int main()
     });
 
     // We don't need this since we're not using HTTP but if it's removed the
-    // program
-    // doesn't compile :-(
+    // program doesn't compile :-(
     uwsHub.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data,
         size_t, size_t) 
     {
@@ -147,4 +152,6 @@ int main()
     }
 
     uwsHub.run();
+
+    visualization.ShutdownGL();
 }
