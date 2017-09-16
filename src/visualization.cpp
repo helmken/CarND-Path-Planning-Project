@@ -298,19 +298,61 @@ void cVisualization::DrawWaypointMap(const double ratio)
 
 void DrawTrack(const vector<sWaypoint>& waypoints)
 {
-    //glLineWidth(10.0);
+    // left road boundary
+    glColor3f(1.0, 1.0, 1.0);
+    glLineWidth(2.0);
+    DrawLaneBoundary(waypoints, 0.0);
+
+    // right boundary of left lane
+    glColor3f(0.0, 1.0, 1.0);
+    glLineWidth(1.0);
+    DrawLaneBoundary(waypoints, 4.0);
+
+    // right boundary of middle lane
+    DrawLaneBoundary(waypoints, 8.0);
+
+    // right road boundary
+    glColor3f(1.0, 1.0, 1.0);
+    glLineWidth(2.0);
+    DrawLaneBoundary(waypoints, 12.0);
+}
+
+void DrawLaneBoundary(
+    const vector<sWaypoint>& waypoints,
+    const double laneWidth)
+{
+    //glBegin(GL_LINE_STRIP);
+
+    //for (const sWaypoint& wp : waypoints)
+    //{
+    //    glVertex3d(wp.x, wp.y, 0.0);
+    //}
+
+    //// connect last waypoint with first
+    //const sWaypoint& firstWp = waypoints.front();
+    //glVertex3d(firstWp.x, firstWp.y, 0.0);
+
+    //glEnd();
+
+    //// assuming lane width is 4 meters
+    //const double laneWidth(4.0);
 
     glBegin(GL_LINE_STRIP);
 
-    glColor3f(1.0, 1.0, 1.0);
     for (const sWaypoint& wp : waypoints)
     {
-        glVertex3d(wp.x, wp.y, 0.0);
+        glVertex3d(
+            wp.x + wp.dx * laneWidth, 
+            wp.y + wp.dy * laneWidth, 
+            0.0);
     }
 
     // connect last waypoint with first
     const sWaypoint& firstWp = waypoints.front();
-    glVertex3d(firstWp.x, firstWp.y, 0.0);
+    glVertex3d(
+        firstWp.x + firstWp.dx * laneWidth, 
+        firstWp.y + firstWp.dy * laneWidth, 
+        0.0);
 
     glEnd();
 }

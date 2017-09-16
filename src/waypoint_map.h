@@ -51,6 +51,7 @@ public:
         double& left, double& right,
         double& bottom, double& top) const;
     const std::vector<sWaypoint>& GetWaypoints() const;
+    const double GetMaxS() const;
 
     // TODO: these have to be removed after refactoring GetXY:
     const std::vector<double>& GetMapPointsS() const;

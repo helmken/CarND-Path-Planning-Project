@@ -74,6 +74,10 @@ public:
 
 void DrawTrack(const std::vector<sWaypoint>& waypoints);
 
+void DrawLaneBoundary(
+    const std::vector<sWaypoint>& waypoints,
+    const double laneWidth);
+
 void DrawWaypoints(const std::vector<sWaypoint>& waypoints);
 
 void SetupProjection(

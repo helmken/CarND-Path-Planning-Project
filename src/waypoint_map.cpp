@@ -78,6 +78,12 @@ void cWaypointMap::GetMapBoundaries(
     top = m_maxY;
 }
 
+const double cWaypointMap::GetMaxS() const
+{
+    // assuming that the last waypoint contains the maximum s value
+    return m_waypoints[m_waypoints.size() - 1].s;
+}
+
 const std::vector<sWaypoint>& cWaypointMap::GetWaypoints() const
 {
     return m_waypoints;

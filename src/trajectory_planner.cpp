@@ -21,8 +21,8 @@ void cTrajectoryPlanner::Init()
 void cTrajectoryPlanner::Execute()
 {
     // TODO: use code from lesson 24
+    printf("TODO: implement cTrajectoryPlanner::Execute!\n");
 }
-
 
 sPath GeneratePath(
     const sEgo& ego, 
@@ -82,23 +82,24 @@ sPath GeneratePath(
     }
 
     // in frenet frame add evenly 30m spaced points ahead of the starting reference
+    const double frenetDCoord(2 + 4 * lane);
     s2DCoordCart next_wp0 = getXY(
         ego.s + 30,
-        (2 + 4 * lane),
+        frenetDCoord,
         waypointMap.GetMapPointsS(),
         waypointMap.GetMapPointsX(),
         waypointMap.GetMapPointsY());
 
     s2DCoordCart next_wp1 = getXY(
         ego.s + 60,
-        (2 + 4 * lane),
+        frenetDCoord,
         waypointMap.GetMapPointsS(),
         waypointMap.GetMapPointsX(),
         waypointMap.GetMapPointsY());
 
     s2DCoordCart next_wp2 = getXY(
         ego.s + 90,
-        (2 + 4 * lane),
+        frenetDCoord,
         waypointMap.GetMapPointsS(),
         waypointMap.GetMapPointsX(),
         waypointMap.GetMapPointsY());
@@ -220,37 +221,63 @@ s2DCoordFrenet getFrenet(
     //return { frenet_s, frenet_d };
 }
 
-// Transform from Frenet s,d coordinates to Cartesian x,y
+// Transform from Frenet s,d coordinate to Cartesian x,y coordinate
 // TODO: according to slack getXY should not be used - instead splines should be used
 s2DCoordCart getXY(
-    double s, double d,
-    std::vector<double> maps_s,
-    std::vector<double> maps_x,
-    std::vector<double> maps_y)
+    const double s, const double d,
+    const std::vector<double>& maps_s,
+    const std::vector<double>& maps_x,
+    const std::vector<double>& maps_y)
 {
-    int prev_wp = -1;
+    int waypointIdx0 = -1;
 
     // the maximum value of s in the standard track is 6914.1492576599103
     // when reaching this point, the app crashes!
-    while (s > maps_s[prev_wp + 1] && (prev_wp < (int)(maps_s.size() - 1)))
+    const double maxS = maps_s[maps_s.size() - 1];
+
+    while (s > maps_s[waypointIdx0 + 1] && (waypointIdx0 < (int)(maps_s.size() - 1)))
     {
-        prev_wp++;
+        waypointIdx0++;
     }
 
-    int wp2 = (prev_wp + 1) % maps_x.size();
+    int waypointIdx1 = (waypointIdx0 + 1) % maps_x.size();
 
-    double heading = atan2((maps_y[wp2] - maps_y[prev_wp]), (maps_x[wp2] - maps_x[prev_wp]));
+    double heading = atan2(
+        (maps_y[waypointIdx1] - maps_y[waypointIdx0]), 
+        (maps_x[waypointIdx1] - maps_x[waypointIdx0]));
     
     // the x,y,s along the segment
-    double seg_s = (s - maps_s[prev_wp]);
+    const double deltaS = (s - maps_s[waypointIdx0]);
 
-    double seg_x = maps_x[prev_wp] + seg_s*cos(heading);
-    double seg_y = maps_y[prev_wp] + seg_s*sin(heading);
+    const double deltaX = maps_x[waypointIdx0] + deltaS * cos(heading);
+    const double deltaY = maps_y[waypointIdx0] + deltaS * sin(heading);
 
-    double perp_heading = heading - pi() / 2;
+    const double headingPerp = heading - M_PI / 2;
 
-    double x = seg_x + d*cos(perp_heading);
-    double y = seg_y + d*sin(perp_heading);
+    const double x = deltaX + d * cos(headingPerp);
+    const double y = deltaY + d * sin(headingPerp);
+
+    return s2DCoordCart(x, y);
+}
+
+s2DCoordCart FrenetToCartesian(
+    const sWaypoint& wp0, const sWaypoint& wp1,
+    const double s, const double d)
+{
+    const double heading = atan2(
+        wp1.y - wp0.y,
+        wp1.x - wp0.x);
+
+    // the x,y,s along the segment
+    const double deltaS = (s - wp0.s);
+
+    const double deltaX = wp0.x + deltaS * cos(heading);
+    const double deltaY = wp0.y + deltaS * sin(heading);
+
+    const double headingPerp = heading - M_PI / 2;
+
+    const double x = deltaX + d * cos(headingPerp);
+    const double y = deltaY + d * sin(headingPerp);
 
     return s2DCoordCart(x, y);
 }

@@ -53,10 +53,14 @@ s2DCoordFrenet getFrenet(
 // Transform from Frenet s,d coordinates to Cartesian x,y
 // TODO: according to slack getXY should not be used - instead splines should be used
 s2DCoordCart getXY(
-    double s, double d,
-    std::vector<double> maps_s,
-    std::vector<double> maps_x,
-    std::vector<double> maps_y);
+    const double s, const double d,
+    const std::vector<double>& maps_s,
+    const std::vector<double>& maps_x,
+    const std::vector<double>& maps_y);
+
+s2DCoordCart FrenetToCartesian(
+    const sWaypoint& wp0, const sWaypoint& wp1,
+    const double s, const double d);
 
 sPath GeneratePath(
     const sEgo& ego, 
