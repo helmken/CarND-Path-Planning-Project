@@ -2,12 +2,17 @@
 
 #include "visualization.h"
 
+
+using namespace std;
+
+
 // Window size of initial window
 const int WINDOWS_WIDTH = 1024;
 const int WINDOWS_HEIGHT = 1024;
 
-cVisualization::cVisualization()
+cVisualization::cVisualization(const cWaypointMap& waypointMap)
     : m_GLWindow(NULL)
+    , m_waypointMap(waypointMap)
 {
 }
 
@@ -71,10 +76,17 @@ void cVisualization::Draw(
         //BoundingBoxOfPaths(
         //    left, right, bottom, top,
         //    previousPath, newPath);
-        BoundingBox(
-            left, right, bottom, top,
-            ego, dynamicObjects,
-            previousPath, newPath);
+        //BoundingBox(
+        //    left, right, bottom, top,
+        //    ego, dynamicObjects,
+        //    previousPath, newPath);
+        //m_waypointMap.GetMapBoundaries(left, right, bottom, top);
+        //const double padding = 50;
+        //left -= padding;
+        //right += padding;
+        //bottom -= padding;
+        //top += padding;
+        BoundingBoxEgo(left, right, bottom, top, ego);
 
         SetupProjection(
             left, right, bottom, top,
@@ -84,6 +96,11 @@ void cVisualization::Draw(
         DrawDynamicObjects(dynamicObjects);
         DrawPath(previousPath, false);
         DrawPath(newPath, true);
+
+        const vector<sWaypoint>& waypoints = m_waypointMap.GetWaypoints();
+        DrawTrack(waypoints);
+        DrawWaypoints(waypoints);
+
 
         glfwSwapBuffers(m_GLWindow);
         glfwPollEvents();
@@ -256,6 +273,79 @@ void cVisualization::DrawPath(const sPath& path, const bool isNewPath)
     }
     glEnd();
 }
+
+void cVisualization::DrawWaypointMap(const double ratio)
+{
+    const vector<sWaypoint>& waypoints = m_waypointMap.GetWaypoints();
+    if (waypoints.empty())
+    {
+        return;
+    }
+
+    double left, right, bottom, top;
+    m_waypointMap.GetMapBoundaries(left, right, bottom, top);
+    const double padding(5.0);
+    SetupProjection(left, right, bottom, top, ratio, padding);
+
+    glMatrixMode(GL_MODELVIEW);
+
+    glLoadIdentity();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    DrawTrack(waypoints);
+    DrawWaypoints(waypoints);
+}
+
+void DrawTrack(const vector<sWaypoint>& waypoints)
+{
+    //glLineWidth(10.0);
+
+    glBegin(GL_LINE_STRIP);
+
+    glColor3f(1.0, 1.0, 1.0);
+    for (const sWaypoint& wp : waypoints)
+    {
+        glVertex3d(wp.x, wp.y, 0.0);
+    }
+
+    // connect last waypoint with first
+    const sWaypoint& firstWp = waypoints.front();
+    glVertex3d(firstWp.x, firstWp.y, 0.0);
+
+    glEnd();
+}
+
+void DrawWaypoints(const std::vector<sWaypoint>& waypoints)
+{
+    //draw a point and define the size, color, and location
+    glPointSize(3.0);
+
+    glBegin(GL_POINTS);
+
+    // first draw all waypoints with white color
+    glColor3f(1.0, 1.0, 1.0);
+    for (const sWaypoint& wp : waypoints)
+    {
+        glVertex3d(wp.x, wp.y, 0.0);
+    }
+
+    // draw first waypoint enlarged in green
+    glPointSize(9.0);
+    glColor3f(0.0, 1.0, 0.0);
+
+    const sWaypoint& firstWp = waypoints.front();
+    glVertex3d(firstWp.x, firstWp.y, 0.0);
+
+    // draw last waypoint enlarged in red
+    glPointSize(6.0);
+    glColor3f(1.0, 0.0, 0.0);
+
+    const sWaypoint& lastWp = waypoints.back();
+    glVertex3d(lastWp.x, lastWp.y, 0.0);
+
+    glEnd();
+}
+
 
 void SetupProjection(
     double left, double right,

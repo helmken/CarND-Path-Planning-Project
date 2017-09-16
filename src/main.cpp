@@ -44,10 +44,12 @@ int main()
 {
     uWS::Hub uwsHub;
 
-    cPathPlanner pathPlanner;
-    pathPlanner.Init();
+    cWaypointMap waypointMap;
+    waypointMap.ReadMapFile();
 
-    cVisualization visualization;
+    cPathPlanner pathPlanner(waypointMap);
+
+    cVisualization visualization(waypointMap);
     visualization.SetupGL();
 
     uwsHub.onMessage(

@@ -23,11 +23,9 @@ public:
     /**
      * Create and initialize modules.
      */
-    cPathPlanner();
+    cPathPlanner(const cWaypointMap& waypointMap);
 
     ~cPathPlanner();
-
-    void Init();
 
     /**
      * Delegate inputs to modules.
@@ -40,7 +38,7 @@ public:
 private:
     cTrajectoryPlanner* m_trajectoryPlanner;
     cBehaviorPlanner* m_behaviorPlanner;
-    sMap m_waypointMap;
+    const cWaypointMap& m_waypointMap;
 };
 
 #endif //PATH_PLANNER_H

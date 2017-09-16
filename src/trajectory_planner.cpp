@@ -26,7 +26,7 @@ void cTrajectoryPlanner::Execute()
 
 sPath GeneratePath(
     const sEgo& ego, 
-    const sMap& waypointMap, 
+    const cWaypointMap& waypointMap,
     const sPath& previousPath, 
     const int lane,
     const double referenceVelocity)
@@ -85,23 +85,23 @@ sPath GeneratePath(
     s2DCoordCart next_wp0 = getXY(
         ego.s + 30,
         (2 + 4 * lane),
-        waypointMap.map_waypoints_s,
-        waypointMap.map_waypoints_x,
-        waypointMap.map_waypoints_y);
+        waypointMap.GetMapPointsS(),
+        waypointMap.GetMapPointsX(),
+        waypointMap.GetMapPointsY());
 
     s2DCoordCart next_wp1 = getXY(
         ego.s + 60,
         (2 + 4 * lane),
-        waypointMap.map_waypoints_s,
-        waypointMap.map_waypoints_x,
-        waypointMap.map_waypoints_y);
+        waypointMap.GetMapPointsS(),
+        waypointMap.GetMapPointsX(),
+        waypointMap.GetMapPointsY());
 
     s2DCoordCart next_wp2 = getXY(
         ego.s + 90,
         (2 + 4 * lane),
-        waypointMap.map_waypoints_s,
-        waypointMap.map_waypoints_x,
-        waypointMap.map_waypoints_y);
+        waypointMap.GetMapPointsS(),
+        waypointMap.GetMapPointsX(),
+        waypointMap.GetMapPointsY());
 
     ptsx.push_back(next_wp0.x);
     ptsx.push_back(next_wp1.x);
@@ -230,6 +230,8 @@ s2DCoordCart getXY(
 {
     int prev_wp = -1;
 
+    // the maximum value of s in the standard track is 6914.1492576599103
+    // when reaching this point, the app crashes!
     while (s > maps_s[prev_wp + 1] && (prev_wp < (int)(maps_s.size() - 1)))
     {
         prev_wp++;

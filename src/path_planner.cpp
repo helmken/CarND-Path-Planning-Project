@@ -3,7 +3,8 @@
 #include "trajectory_planner.h"
 
 
-cPathPlanner::cPathPlanner()
+cPathPlanner::cPathPlanner(const cWaypointMap& waypointMap)
+    : m_waypointMap(waypointMap)
 {
     m_behaviorPlanner = new cBehaviorPlanner();
     m_trajectoryPlanner = new cTrajectoryPlanner();
@@ -16,11 +17,6 @@ cPathPlanner::~cPathPlanner()
 {
     delete m_behaviorPlanner;
     delete m_trajectoryPlanner;
-}
-
-void cPathPlanner::Init()
-{
-    m_waypointMap = ReadMapFile();
 }
 
 sPath cPathPlanner::Execute(

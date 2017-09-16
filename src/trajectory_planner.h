@@ -60,7 +60,7 @@ s2DCoordCart getXY(
 
 sPath GeneratePath(
     const sEgo& ego, 
-    const sMap& waypointMap, 
+    const cWaypointMap& waypointMap,
     const sPath& previousPath, 
     const int lane,
     const double referenceVelocity);

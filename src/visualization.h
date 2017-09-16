@@ -12,15 +12,17 @@ extern "C"
 #include "dynamic_object.h"
 #include "ego.h"
 #include "path.h"
+#include "waypoint_map.h"
 
 
 class cVisualization
 {
 private:
     GLFWwindow* m_GLWindow;
+    const cWaypointMap& m_waypointMap;
 
 public:
-    cVisualization();
+    cVisualization(const cWaypointMap& waypointMap);
 
     void SetupGL();
 
@@ -66,7 +68,13 @@ public:
     void DrawDynamicObjects(const std::vector<sDynamicObject>& dynamicObjects);
     
     void DrawPath(const sPath& path, const bool isNewPath);
+
+    void DrawWaypointMap(const double ratio);
 };
+
+void DrawTrack(const std::vector<sWaypoint>& waypoints);
+
+void DrawWaypoints(const std::vector<sWaypoint>& waypoints);
 
 void SetupProjection(
     double left, double right,
