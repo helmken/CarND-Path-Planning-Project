@@ -21,13 +21,16 @@ cPathPlanner::~cPathPlanner()
 
 sPath cPathPlanner::Execute(
     const sEgo& ego,
-    const std::vector<sDynamicObject>& dynamicObjects,
+    const std::vector<sDynamicObject>& vehicles,
     const sPath& previousPath)
 {
+    sPath plannedPath = m_behaviorPlanner->Execute();
+
+    ///////////////////////////////////////////////////////////////////////////
     int targetLane = 1;
 
     double ref_vel = CalculateReferenceSpeed(
-        dynamicObjects,
+        vehicles,
         targetLane,
         ego);
     

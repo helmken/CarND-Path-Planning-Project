@@ -1,8 +1,10 @@
 #ifndef TRAJECTORY_PLANNER_H
 #define TRAJECTORY_PLANNER_H
 
-#include "path.h"
+
+#include "behavior_planner.h"
 #include "ego.h"
+#include "path.h"
 #include "waypoint_map.h"
 
 
@@ -39,7 +41,6 @@ class cTrajectoryPlanner
 public:
     cTrajectoryPlanner();
     void Init(); // TODO: input
-    void Execute(); // TODO: input
 
 private:
 };
@@ -68,6 +69,15 @@ sPath GeneratePath(
     const sPath& previousPath, 
     const int lane,
     const double referenceVelocity);
+
+/*
+Generate path for given behavior
+*/
+sPath GeneratePath(
+    const sBehavior& plannedBehavior,
+    const sEgo& ego,
+    const cWaypointMap& waypointMap,
+    const sPath& previousPath);
 
 
 #endif // TRAJECTORY_PLANNER_H

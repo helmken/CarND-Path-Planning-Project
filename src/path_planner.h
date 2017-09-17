@@ -35,7 +35,7 @@ public:
      */
     sPath Execute(
         const sEgo& ego,
-        const std::vector<sDynamicObject>& dynamicObjects,
+        const std::vector<sDynamicObject>& vehicles,
         const sPath& previousPath);
 
 private:

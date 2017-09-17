@@ -18,10 +18,17 @@ void cTrajectoryPlanner::Init()
 
 }
 
-void cTrajectoryPlanner::Execute()
+sPath GeneratePath(
+    const sBehavior& plannedBehavior,
+    const sEgo& ego,
+    const cWaypointMap& waypointMap,
+    const sPath& previousPath)
 {
-    // TODO: use code from lesson 24
-    printf("TODO: implement cTrajectoryPlanner::Execute!\n");
+    // TODO: use code from lesson 5.24
+    
+    sPath plannedPath;
+    // TODO: implement real path planning for given situation
+    return plannedPath;
 }
 
 sPath GeneratePath(

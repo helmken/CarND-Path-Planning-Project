@@ -28,44 +28,17 @@ void cBehaviorPlanner::Init(cTrajectoryPlanner* trajectoryPlanner)
     m_trajectoryPlanner = trajectoryPlanner;
 }
 
-void cBehaviorPlanner::Execute() // TODO: input params: map, route, predictions
+sPath cBehaviorPlanner::Execute() // TODO: input params: map, route, predictions
 {
     //def transition_function(predictions, current_fsm_state, current_pose, cost_functions, weights) :    //    # only consider states which can be reached from current FSM state.    //    possible_successor_states = successor_states(current_fsm_state)            //    # keep track of the total cost of each state.    //    costs = []    //    for state in possible_successor_states :    //      # generate a rough idea of what trajectory we would    //      # follow IF we chose this state.    //      trajectory_for_state = generate_trajectory(state, current_pose, predictions)    //          //      # calculate the "cost" associated with that trajectory.    //      cost_for_state = 0    //      for i in range(len(cost_functions)) :    //        # apply each cost function to the generated trajectory    //        cost_function = cost_functions[i]    //        cost_for_cost_function = cost_function(trajectory_for_state, predictions)                            //    //        # multiply the cost by the associated weight    //        weight = weights[i]    //        cost_for_state += weight * cost_for_cost_function    //        costs.append({ 'state' : state, 'cost' : cost_for_state })            //    //        # Find the minimum cost state.    //        best_next_state = None    //        min_cost = 9999999    //        for i in range(len(possible_successor_states)) :    //            state = possible_successor_states[i]    //            cost = costs[i]    //            if cost < min_cost :    //                min_cost = cost    //                best_next_state = state     
     //  return best_next_state
 
     // TODO: use behavior planner from lesson 4.16
+
+    sPath plannedPath;
+    // TODO: implement real behavior planning!
+    return plannedPath;
 }
-
-sLaneInfo::sLaneInfo(const eLaneName laneName)
-    : laneName(laneName)
-    , leadingVehicleAhead(false)
-{
-    switch (laneName)
-    {
-    case LN_LANE_LEFT:
-        boundaryLeft = 0.0;
-        boundaryRight = boundaryLeft + laneWidth;
-        break;
-    case LN_LANE_MIDDLE:
-        boundaryLeft = laneWidth;
-        boundaryRight = boundaryLeft + laneWidth;
-        break;
-    case LN_LANE_RIGHT:
-        boundaryLeft = 2.0 * laneWidth;
-        boundaryRight = boundaryLeft + laneWidth;
-        break;
-    }
-};
-
-bool sLaneInfo::IsWithinLaneBoundaries(const double d)
-{
-    if (d >= boundaryLeft && d < boundaryRight)
-    {
-        return true;
-    }
-    return false;
-}
-
 
 double CalculateReferenceSpeed(
     const std::vector<sDynamicObject>& dynamicObjects, 
@@ -163,14 +136,14 @@ double CalculateReferenceSpeed(
 }
 
 void AnalyseRoadSituation(
-    const std::vector<sDynamicObject>& dynamicObjects,
+    const std::vector<sDynamicObject>& vehicles,
     const double egoS,
-    sCurrentSituation& roadInfo)
+    sCurrentSituation& currentSituation)
 {
-    SortDynamicObjectsByLane(dynamicObjects, roadInfo);
-    FindLeadingDynamicObjectInLane(egoS, roadInfo.laneLeft);
-    FindLeadingDynamicObjectInLane(egoS, roadInfo.laneMiddle);
-    FindLeadingDynamicObjectInLane(egoS, roadInfo.laneRight);
+    SortDynamicObjectsByLane(vehicles, currentSituation);
+    FindLeadingDynamicObjectInLane(egoS, currentSituation.laneLeft);
+    FindLeadingDynamicObjectInLane(egoS, currentSituation.laneMiddle);
+    FindLeadingDynamicObjectInLane(egoS, currentSituation.laneRight);
 }
 
 void SortDynamicObjectsByLane(

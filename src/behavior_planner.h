@@ -7,6 +7,7 @@
 #include "current_situation.h"
 #include "dynamic_object.h"
 #include "ego.h"
+#include "path.h"
 
 
 enum eLaneChangeDirection
@@ -71,7 +72,7 @@ public:
      * Generate trajectories for each possible next state and select
      * the best possible next state based on a cost function.
      */
-    void Execute(); // TODO: input params: map, route, predictions
+    sPath Execute(); // TODO: input params: map, route, predictions
 
 private:
     eEgoState m_egoState;
@@ -84,9 +85,9 @@ double CalculateReferenceSpeed(
     const sEgo& ego);
 
 void AnalyseRoadSituation(
-    const std::vector<sDynamicObject>& dynamicObjects,
+    const std::vector<sDynamicObject>& vehicles,
     const double egoS,
-    sCurrentSituation& roadInfo);
+    sCurrentSituation& currentSituation);
 
 void SortDynamicObjectsByLane(
     const std::vector<sDynamicObject>& dynamicObjects,
