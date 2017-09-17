@@ -38,9 +38,9 @@ struct sLaneInfo
     double boundaryLeft;
     double boundaryRight;
     
-    bool leadingDynamicObjectAhead;
+    bool leadingVehicleAhead;
     sDynamicObject leadingDynamicObject;
-    double leadingDynamicObjectDistance;
+    double distanceToLeadingVehicle;
     
     std::vector<sDynamicObject> dynamicObjects;
 
@@ -61,6 +61,33 @@ struct sRoadInfo
         , laneRight(LN_LANE_RIGHT)
     {};
 };
+
+/*
+Behavior description as suggested in Lesson 4.2 
+"Behavior Planning - Understanding Output" 
+*/
+struct sBehavior
+{
+    eLaneName targetLane;
+
+    /*
+    ID of vehicle to follow: 
+    - if ID is valid, ego speed has to be adapted to target vehicle speed
+    - if ID is invalid, ego can accelerate to maximum speed
+    */
+    int targetLeadingVehicleId;
+
+    /*
+    if target vehicle ID is invalid, adapt ego speed to target speed
+    */
+    double targetSpeed;
+
+    /*
+    duration to reach desired behavior
+    */
+    double secondsToReachTarget;
+};
+
 
 class cTrajectoryPlanner;
 

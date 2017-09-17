@@ -38,7 +38,7 @@ void cBehaviorPlanner::Execute() // TODO: input params: map, route, predictions
 
 sLaneInfo::sLaneInfo(const eLaneName laneName)
     : laneName(laneName)
-    , leadingDynamicObjectAhead(false)
+    , leadingVehicleAhead(false)
 {
     switch (laneName)
     {
@@ -217,13 +217,13 @@ void FindLeadingDynamicObjectInLane(
 
     if (closestIdx < dynamicObjects.size())
     {
-        laneInfo.leadingDynamicObjectAhead = true;
+        laneInfo.leadingVehicleAhead = true;
         laneInfo.leadingDynamicObject = dynamicObjects[closestIdx];
-        laneInfo.leadingDynamicObjectDistance = closestS - egoS;
+        laneInfo.distanceToLeadingVehicle = closestS - egoS;
     }
     else
     {
-        laneInfo.leadingDynamicObjectAhead = false;
+        laneInfo.leadingVehicleAhead = false;
     }
 }
 
@@ -237,23 +237,23 @@ bool StayOnCurrentLane(
     {
     case LN_LANE_LEFT:
         {
-            if (    !roadInfo.laneLeft.leadingDynamicObjectAhead
-                ||  roadInfo.laneLeft.leadingDynamicObjectDistance > distanceKeepLane)
+            if (    !roadInfo.laneLeft.leadingVehicleAhead
+                ||  roadInfo.laneLeft.distanceToLeadingVehicle > distanceKeepLane)
             {
                 return true;
             }
         }
         break;
     case LN_LANE_MIDDLE:
-        if (!roadInfo.laneMiddle.leadingDynamicObjectAhead
-            || roadInfo.laneMiddle.leadingDynamicObjectDistance > distanceKeepLane)
+        if (!roadInfo.laneMiddle.leadingVehicleAhead
+            || roadInfo.laneMiddle.distanceToLeadingVehicle > distanceKeepLane)
         {
             return true;
         }
         break;
     case LN_LANE_RIGHT:
-        if (!roadInfo.laneMiddle.leadingDynamicObjectAhead
-            || roadInfo.laneMiddle.leadingDynamicObjectDistance > distanceKeepLane)
+        if (!roadInfo.laneMiddle.leadingVehicleAhead
+            || roadInfo.laneMiddle.distanceToLeadingVehicle > distanceKeepLane)
         {
             return true;
         }
@@ -273,9 +273,9 @@ eLaneChangeDirection SelectLaneChangeDirection(
     {
     case LN_LANE_LEFT:
         {
-            if (    !roadInfo.laneMiddle.leadingDynamicObjectAhead
-                ||      roadInfo.laneMiddle.leadingDynamicObjectDistance
-                    >   roadInfo.laneLeft.leadingDynamicObjectDistance)
+            if (    !roadInfo.laneMiddle.leadingVehicleAhead
+                ||      roadInfo.laneMiddle.distanceToLeadingVehicle
+                    >   roadInfo.laneLeft.distanceToLeadingVehicle)
             {
                 return LCD_RIGHT;
             }
@@ -283,21 +283,21 @@ eLaneChangeDirection SelectLaneChangeDirection(
         break;
     case LN_LANE_MIDDLE:
         {
-            if (!roadInfo.laneLeft.leadingDynamicObjectAhead)
+            if (!roadInfo.laneLeft.leadingVehicleAhead)
             {
                 return LCD_LEFT;
             }
-            else if (!roadInfo.laneRight.leadingDynamicObjectAhead)
+            else if (!roadInfo.laneRight.leadingVehicleAhead)
             {
                 return LCD_RIGHT;
             }
-            else if (   roadInfo.laneLeft.leadingDynamicObjectDistance
-                      > roadInfo.laneRight.leadingDynamicObjectDistance)
+            else if (   roadInfo.laneLeft.distanceToLeadingVehicle
+                      > roadInfo.laneRight.distanceToLeadingVehicle)
             {
                 return LCD_LEFT;
             }
-            else if (   roadInfo.laneRight.leadingDynamicObjectDistance
-                     >  roadInfo.laneLeft.leadingDynamicObjectDistance)
+            else if (   roadInfo.laneRight.distanceToLeadingVehicle
+                     >  roadInfo.laneLeft.distanceToLeadingVehicle)
             {
                 return LCD_RIGHT;
             }
@@ -305,9 +305,9 @@ eLaneChangeDirection SelectLaneChangeDirection(
         break;
     case LN_LANE_RIGHT:
         {
-            if (    !roadInfo.laneMiddle.leadingDynamicObjectAhead
-                ||      roadInfo.laneMiddle.leadingDynamicObjectDistance
-                    >   roadInfo.laneRight.leadingDynamicObjectDistance)
+            if (    !roadInfo.laneMiddle.leadingVehicleAhead
+                ||      roadInfo.laneMiddle.distanceToLeadingVehicle
+                    >   roadInfo.laneRight.distanceToLeadingVehicle)
             {
                 return LCD_LEFT;
             }
