@@ -1,8 +1,10 @@
 #ifndef BEHAVIOR_PLANNER_H
 #define BEHAVIOR_PLANNER_H
 
+
 #include <vector>
 
+#include "current_situation.h"
 #include "dynamic_object.h"
 #include "ego.h"
 
@@ -28,39 +30,6 @@ enum eEgoState
     ES_LANE_CHANGE_RIGHT // move to right lane
 };
 
-// number of Lanes 
-const int numLanes(3);
-
-struct sLaneInfo
-{
-    eLaneName laneName;
-
-    double boundaryLeft;
-    double boundaryRight;
-    
-    bool leadingVehicleAhead;
-    sDynamicObject leadingDynamicObject;
-    double distanceToLeadingVehicle;
-    
-    std::vector<sDynamicObject> dynamicObjects;
-
-    sLaneInfo(const eLaneName laneName);
-
-    bool IsWithinLaneBoundaries(const double d);
-};
-
-struct sRoadInfo
-{
-    sLaneInfo laneLeft;
-    sLaneInfo laneMiddle;
-    sLaneInfo laneRight;
-
-    sRoadInfo()
-        : laneLeft(LN_LANE_LEFT)
-        , laneMiddle(LN_LANE_MIDDLE)
-        , laneRight(LN_LANE_RIGHT)
-    {};
-};
 
 /*
 Behavior description as suggested in Lesson 4.2 
@@ -117,22 +86,22 @@ double CalculateReferenceSpeed(
 void AnalyseRoadSituation(
     const std::vector<sDynamicObject>& dynamicObjects,
     const double egoS,
-    sRoadInfo& roadInfo);
+    sCurrentSituation& roadInfo);
 
 void SortDynamicObjectsByLane(
     const std::vector<sDynamicObject>& dynamicObjects,
-    sRoadInfo& roadInfo);
+    sCurrentSituation& roadInfo);
 
 void FindLeadingDynamicObjectInLane(
     const double egoS,
     sLaneInfo& laneInfo);
 
 bool StayOnCurrentLane(
-    const sRoadInfo& roadInfo, 
+    const sCurrentSituation& roadInfo,
     const sEgo& ego);
 
 eLaneChangeDirection SelectLaneChangeDirection(
-    const sRoadInfo& roadInfo,
+    const sCurrentSituation& roadInfo,
     const sEgo& ego);
 
 eLaneName DToLaneName(const double d);

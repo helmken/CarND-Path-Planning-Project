@@ -3,7 +3,8 @@ project(Path_Planning)
 cmake_minimum_required (VERSION 3.5)
 
 #add_definitions(-std=c++11 -O3 -DHAVE_STDDEF_H)
-add_definitions(-std=c++11 -O0 -DHAVE_STDDEF_H -D_USE_MATH_DEFINES)
+#add_definitions(-std=c++11 -O0 -DHAVE_STDDEF_H -D_USE_MATH_DEFINES)
+add_definitions(-std=c++11 -DHAVE_STDDEF_H -D_USE_MATH_DEFINES)
 
 
 set(CXX_FLAGS "-Wall")
@@ -14,6 +15,7 @@ set(sources
     src/behavior_planner.cpp
     src/conversion_helpers.cpp
     src/conversion_helpers.h
+    src/current_situation.h
     src/dynamic_object.h
     src/ego.h
     src/json.hpp
