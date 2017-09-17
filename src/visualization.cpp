@@ -161,7 +161,7 @@ void cVisualization::BoundingBoxEgo(
     double& bottom, double& top,
     const sEgo& ego)
 {
-    const double surrounding(100);
+    const double surrounding(50);
     left = ego.x - surrounding;
     right = ego.x + surrounding;
     bottom = ego.y - surrounding;

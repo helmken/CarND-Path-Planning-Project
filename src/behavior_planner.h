@@ -7,13 +7,6 @@
 #include "ego.h"
 
 
-enum eLaneName 
-{
-    LN_LANE_LEFT,
-    LN_LANE_MIDDLE,
-    LN_LANE_RIGHT
-};
-
 enum eLaneChangeDirection
 {
     LCD_LEFT,
@@ -37,8 +30,6 @@ enum eEgoState
 
 // number of Lanes 
 const int numLanes(3);
-
-const double laneWidth(4.0);
 
 struct sLaneInfo
 {

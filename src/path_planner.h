@@ -14,7 +14,7 @@ class cBehaviorPlanner;
  * Main module, sets up and maintains the other modules
  * - trajectory planner
  * - behavior planner
- * - prediction
+ * - prediction (TODO: implement!)
  */
 class cPathPlanner
 {
@@ -25,6 +25,9 @@ public:
      */
     cPathPlanner(const cWaypointMap& waypointMap);
 
+    /*
+    * Cleanup allocated resources.
+    */
     ~cPathPlanner();
 
     /**
@@ -36,8 +39,20 @@ public:
         const sPath& previousPath);
 
 private:
+
+    /*
+    * Responsible for generating trajectories.
+    */
     cTrajectoryPlanner* m_trajectoryPlanner;
+
+    /*
+    * Responsible for decision to change or keep lane and adjust speed.
+    */
     cBehaviorPlanner* m_behaviorPlanner;
+
+    /*
+    * Map of track, used for visualization and trajectory generation.
+    */
     const cWaypointMap& m_waypointMap;
 };
 
