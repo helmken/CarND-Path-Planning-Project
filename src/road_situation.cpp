@@ -80,9 +80,9 @@ eLaneName cRoadSituation::GetOptimalLaneForLaneChange(
     const sEgo& ego) const
 {
     // prefer ego lane in case of equal distance
-    const eLaneName egoLane = ego.GetCurrentLaneName();
+    const eLaneName egoLane = ego.GetLaneName();
     eLaneName resultLane = egoLane;
-    double distanceLeadingVehicle = GetLaneInfo(ego.GetCurrentLaneName())
+    double distanceLeadingVehicle = GetLaneInfo(egoLane)
         .GetDistanceToLeadingVehicle();
 
     // prefer middle lane to avoid crossing two lanes
@@ -127,6 +127,57 @@ eLaneName cRoadSituation::GetOptimalLaneForLaneChange(
 
     return resultLane;
 }
+
+bool cRoadSituation::IsLaneOptimal(const eLaneName lane) const
+{
+    // if no leading vehicle in current lane, then its optimal lane
+    const sLaneInfo& laneInfo = GetLaneInfo(lane);
+    if (!laneInfo.IsLeadingVehicleAhead())
+    {
+        return true;
+    }
+
+    double distanceLeadingVehicle = laneInfo.GetDistanceToLeadingVehicle();
+
+    if (LN_LANE_MIDDLE != lane)
+    {
+        if (!laneMiddle.IsLeadingVehicleAhead())
+        {
+            return false;
+        }
+        else if (laneMiddle.GetDistanceToLeadingVehicle() > distanceLeadingVehicle)
+        {
+            return false;
+        }
+    }
+
+    if (LN_LANE_LEFT != lane)
+    {
+        if (!laneLeft.IsLeadingVehicleAhead())
+        {
+            return false;
+        }
+        else if (laneLeft.GetDistanceToLeadingVehicle() > distanceLeadingVehicle)
+        {
+            return false;
+        }
+    }
+
+    if (LN_LANE_RIGHT != lane)
+    {
+        if (!laneRight.IsLeadingVehicleAhead())
+        {
+            return false;
+        }
+        else if (laneRight.GetDistanceToLeadingVehicle() > distanceLeadingVehicle)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 
 //eLaneChangeDirection cRoadSituation::SelectLaneChangeDirection(
 //    const sEgo& ego)

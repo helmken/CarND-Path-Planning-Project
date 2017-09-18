@@ -32,8 +32,7 @@ public:
     eLaneName GetOptimalLaneForLaneChange(
         const sEgo& ego) const;
 
-    //eLaneChangeDirection SelectLaneChangeDirection(
-    //    const sEgo& ego);
+    bool IsLaneOptimal(const eLaneName lane) const;
 };
 
 #endif // ROAD_SITUATION_H

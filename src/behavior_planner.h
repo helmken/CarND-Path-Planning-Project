@@ -10,10 +10,11 @@
 #include "path.h"
 
 
-// general tasks that will be handled by trajectory planner 
+// general tasks that will be handled by path planner 
 // - drive at target speed 
 // - maintain safety distance
 // - avoid collisions
+
 enum eEgoState
 {
     ES_LANE_KEEP, // stay close to lane center, drive at target speed
@@ -24,8 +25,6 @@ enum eEgoState
 };
 
 
-// maximum allowed speed
-//const double maxSpeed(49.9);  // this is in miles per hour
 const double maxSpeed(5.0); // meters per second
 
 const double thresholdKeepLane(30.0);
@@ -102,16 +101,6 @@ private:
     cTrajectoryPlanner* m_trajectoryPlanner;
 };
 
-//double CalculateReferenceSpeed(
-//    const std::vector<sDynamicObject>& dynamicObjects,
-//    int& egoLane,
-//    const sEgo& ego);
-
-void AnalyzeRoadSituation(
-    const std::vector<sDynamicObject>& vehicles,
-    const double egoS,
-    cRoadSituation& currentSituation);
-
 bool StayOnCurrentLane(
     const sEgo& ego,
     const cRoadSituation& roadInfo
@@ -124,33 +113,6 @@ bool AccelerateToMaxSpeed(
 void AdaptSpeedToLeadingVehicle(
     const sLaneInfo& laneInfo,
     sBehavior& plannedBehavior);
-
-
-//bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
-//    const cRoadSituation& roadInfo,
-//    const sEgo& ego,
-//    sBehavior& plannedBehavior);
-
-//bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
-//    const sLaneInfo& laneInfo,
-//    sBehavior& plannedBehavior);
-
-//bool StayOnCurrentLaneAndAdaptSpeed(
-//    const cRoadSituation& roadInfo,
-//    const sEgo& ego,
-//    sBehavior& plannedBehavior);
-
-//void AdaptToLeadingVehicleInLane(
-//    const sLaneInfo& currentLane, 
-//    sBehavior& behavior);
-
-int GetLaneIdxFromLaneChangeDirection(
-    const eLaneChangeDirection laneChangeDir,
-    const sEgo& ego);
-
-eLaneName GetLaneNameFromLaneChangeDirection(
-    const eLaneChangeDirection laneChangeDir,
-    const sEgo& ego);
 
 int LaneNameToLaneIdx(eLaneName laneName);
 

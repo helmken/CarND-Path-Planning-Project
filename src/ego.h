@@ -19,7 +19,7 @@ struct sEgo
 
     sEgo(double x, double y, double s, double d, double yaw, double speed);
 
-    eLaneName GetCurrentLaneName() const;
+    eLaneName GetLaneName() const;
 };
 
 #endif // EGO_H

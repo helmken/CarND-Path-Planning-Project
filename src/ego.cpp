@@ -1,5 +1,5 @@
 #include "ego.h"
-#include "lane_info.h"
+
 
 // jwdunn1 [00:34]
 // The "collider" on the car measures 4.47x2.43
@@ -10,7 +10,7 @@ sEgo::sEgo(double x, double y, double s, double d, double yaw, double speed)
 {
 }
 
-eLaneName sEgo::GetCurrentLaneName() const
+eLaneName sEgo::GetLaneName() const
 {
     if (d >= 0.0 && d < laneWidth)
     {

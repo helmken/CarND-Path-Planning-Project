@@ -24,27 +24,35 @@ sPath cPathPlanner::Execute(
     const std::vector<sDynamicObject>& vehicles,
     const sPath& previousPath)
 {
-    sBehavior plannedBehavior = m_behaviorPlanner->Execute(
-        ego, vehicles);
-    printf(ToString(plannedBehavior).c_str());
+    sPath newPath;
 
-    ///////////////////////////////////////////////////////////////////////////
-    //int targetLane = 1;
-    int targetLane = LaneNameToLaneIdx(plannedBehavior.targetLane);
+    try
+    {
+        sBehavior plannedBehavior = m_behaviorPlanner->Execute(
+            ego, vehicles);
+        printf(ToString(plannedBehavior).c_str());
 
-    //double ref_vel = CalculateReferenceSpeed(
-    //    vehicles,
-    //    targetLane,
-    //    ego);
+        int targetLane = LaneNameToLaneIdx(plannedBehavior.targetLane);
 
-    double ref_vel = 5.0;
-    
-    sPath newPath = GeneratePath(
-        ego, 
-        m_waypointMap, 
-        previousPath, 
-        targetLane, 
-        ref_vel);
-    
+        //double ref_vel = 5.0;
+        double ref_vel = plannedBehavior.targetSpeed;
+
+        newPath = GeneratePath(
+            ego,
+            m_waypointMap,
+            previousPath,
+            targetLane,
+            ref_vel);
+
+    }
+    catch (std::exception& ex)
+    {
+        std::cerr << "exception: " << ex.what() << std::endl;
+    }
+    catch (...)
+    {
+        std::cerr << "exception thrown" << std::endl;
+    }
+
     return newPath;
 }

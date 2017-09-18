@@ -6,6 +6,12 @@
 #include "trajectory_planner.h"
 
 
+//def transition_function(predictions, current_fsm_state, current_pose, cost_functions, weights) ://    # only consider states which can be reached from current FSM state.//    possible_successor_states = successor_states(current_fsm_state)        //    # keep track of the total cost of each state.//    costs = []//    for state in possible_successor_states ://      # generate a rough idea of what trajectory we would//      # follow IF we chose this state.//      trajectory_for_state = generate_trajectory(state, current_pose, predictions)//      //      # calculate the "cost" associated with that trajectory.//      cost_for_state = 0//      for i in range(len(cost_functions)) ://        # apply each cost function to the generated trajectory//        cost_function = cost_functions[i]//        cost_for_cost_function = cost_function(trajectory_for_state, predictions)                        ////        # multiply the cost by the associated weight//        weight = weights[i]//        cost_for_state += weight * cost_for_cost_function//        costs.append({ 'state' : state, 'cost' : cost_for_state })        ////        # Find the minimum cost state.//        best_next_state = None//        min_cost = 9999999//        for i in range(len(possible_successor_states)) ://            state = possible_successor_states[i]//            cost = costs[i]//            if cost < min_cost ://                min_cost = cost//                best_next_state = state     
+//  return best_next_state
+
+// TODO: use behavior planner from lesson 4.16
+
+
 using namespace std;
 
 
@@ -24,19 +30,13 @@ sBehavior cBehaviorPlanner::Execute(
     const sEgo& ego,
     const std::vector<sDynamicObject>& vehicles)
 {
-    //def transition_function(predictions, current_fsm_state, current_pose, cost_functions, weights) :    //    # only consider states which can be reached from current FSM state.    //    possible_successor_states = successor_states(current_fsm_state)            //    # keep track of the total cost of each state.    //    costs = []    //    for state in possible_successor_states :    //      # generate a rough idea of what trajectory we would    //      # follow IF we chose this state.    //      trajectory_for_state = generate_trajectory(state, current_pose, predictions)    //          //      # calculate the "cost" associated with that trajectory.    //      cost_for_state = 0    //      for i in range(len(cost_functions)) :    //        # apply each cost function to the generated trajectory    //        cost_function = cost_functions[i]    //        cost_for_cost_function = cost_function(trajectory_for_state, predictions)                            //    //        # multiply the cost by the associated weight    //        weight = weights[i]    //        cost_for_state += weight * cost_for_cost_function    //        costs.append({ 'state' : state, 'cost' : cost_for_state })            //    //        # Find the minimum cost state.    //        best_next_state = None    //        min_cost = 9999999    //        for i in range(len(possible_successor_states)) :    //            state = possible_successor_states[i]    //            cost = costs[i]    //            if cost < min_cost :    //                min_cost = cost    //                best_next_state = state     
-    //  return best_next_state
-
-    // TODO: use behavior planner from lesson 4.16
-
     cRoadSituation roadSituation;
     roadSituation.AnalyzeRoadSituation(vehicles, ego.s);
 
     sBehavior plannedBehavior;
     if (StayOnCurrentLane(ego, roadSituation))
     {
-        //printf("StayOnCurrentLane\n");
-        const sLaneInfo& laneInfo = roadSituation.GetLaneInfo(ego.GetCurrentLaneName());
+        const sLaneInfo& laneInfo = roadSituation.GetLaneInfo(ego.GetLaneName());
 
         if (AccelerateToMaxSpeed(laneInfo, plannedBehavior))
         {
@@ -191,7 +191,7 @@ bool StayOnCurrentLane(
     const sEgo& ego,
     const cRoadSituation& roadInfo)
 {
-    const sLaneInfo& laneInfo = roadInfo.GetLaneInfo(ego.GetCurrentLaneName());
+    const sLaneInfo& laneInfo = roadInfo.GetLaneInfo(ego.GetLaneName());
 
     // no leading vehicle in ego lane or distance to leading vehicle is larger
     // than threshold
@@ -202,172 +202,13 @@ bool StayOnCurrentLane(
     }
 
     // distance to leading vehicle is the largest in ego lane
+    if (roadInfo.IsLaneOptimal(ego.GetLaneName()))
+    {
+        return true;
+    }
 
     return false;
 }
-
-//bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
-//    const cRoadSituation& roadInfo,
-//    const sEgo& ego,
-//    sBehavior& plannedBehavior)
-//{
-//    const eLaneName egoLane = ego.GetCurrentLaneName();
-//
-//    switch (egoLane)
-//    {
-//    case LN_LANE_LEFT:
-//    {
-//        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
-//            roadInfo.laneLeft, plannedBehavior);
-//    }
-//    break;
-//    case LN_LANE_MIDDLE:
-//    {
-//        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
-//            roadInfo.laneMiddle, plannedBehavior);
-//    }
-//    break;
-//    case LN_LANE_RIGHT:
-//    {
-//        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
-//            roadInfo.laneRight, plannedBehavior);
-//    }
-//    break;
-//    }
-//
-//    return false;
-//}
-
-//bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
-//    const sLaneInfo& laneInfo,
-//    sBehavior& plannedBehavior)
-//{
-//    if (    !laneInfo.leadingVehicleAhead
-//        ||  laneInfo.distanceToLeadingVehicle > thresholdKeepLane)
-//    {
-//        plannedBehavior = sBehavior(
-//            laneInfo.laneName,
-//            invalidVehicleId,
-//            maxSpeed,
-//            0.0);
-//
-//        return true;
-//    }
-//
-//    return false;
-//}
-
-
-//bool StayOnCurrentLaneAndAdaptSpeed(
-//    const cRoadSituation& roadInfo,
-//    const sEgo& ego,
-//    sBehavior& plannedBehavior)
-//{
-//    const eLaneName egoLane = ego.GetCurrentLaneName();
-//
-//    switch (egoLane)
-//    {
-//    case LN_LANE_LEFT:
-//    {
-//        if (    roadInfo.laneMiddle.leadingVehicleAhead
-//            &&  (   roadInfo.laneMiddle.distanceToLeadingVehicle 
-//                 <  roadInfo.laneLeft.distanceToLeadingVehicle))
-//        {
-//            AdaptToLeadingVehicleInLane(roadInfo.laneLeft, plannedBehavior);
-//            return true;
-//        }
-//    }
-//    break;
-//    case LN_LANE_MIDDLE:
-//    {
-//        double distanceLeadingVeh = roadInfo.laneMiddle.distanceToLeadingVehicle;
-//
-//        if (    roadInfo.laneLeft.leadingVehicleAhead
-//            && (roadInfo.laneLeft.distanceToLeadingVehicle < distanceLeadingVeh)
-//            &&  roadInfo.laneRight.leadingVehicleAhead
-//            && (roadInfo.laneRight.distanceToLeadingVehicle < distanceLeadingVeh))
-//        {
-//            AdaptToLeadingVehicleInLane(roadInfo.laneMiddle, plannedBehavior);
-//            return true;
-//        }
-//    }
-//    break;
-//    case LN_LANE_RIGHT:
-//    {
-//        if (roadInfo.laneMiddle.leadingVehicleAhead
-//            && (roadInfo.laneMiddle.distanceToLeadingVehicle
-//                <  roadInfo.laneRight.distanceToLeadingVehicle))
-//        {
-//            AdaptToLeadingVehicleInLane(roadInfo.laneRight, plannedBehavior);
-//            return true;
-//        }
-//    }
-//    break;
-//    }
-//
-//    return false;
-//}
-
-//void AdaptToLeadingVehicleInLane(const sLaneInfo& currentLane, sBehavior& behavior)
-//{
-//    const sDynamicObject& leadingVeh = currentLane.leadingVehicle;
-//    double speed = sqrt(pow(leadingVeh.vx, 2) + pow(leadingVeh.vy, 2));
-//    behavior = sBehavior(
-//        LN_LANE_RIGHT,
-//        leadingVeh.id,
-//        speed,
-//        0.0);
-//}
-
-
-int GetLaneIdxFromLaneChangeDirection(
-    const eLaneChangeDirection laneChangeDir,
-    const sEgo& ego)
-{
-    const eLaneName egoLane = ego.GetCurrentLaneName();
-
-    if (LCD_STRAIGHT == laneChangeDir)
-    {
-        return LaneNameToLaneIdx(egoLane);
-    }
-
-    switch (laneChangeDir)
-    {
-    case LCD_LEFT:
-        return GetLeftLaneIdx(egoLane);
-        break;
-    case LCD_RIGHT:
-        return GetRightLaneIdx(egoLane);
-        break;
-    }
-
-    return 1;
-}
-
-eLaneName GetLaneNameFromLaneChangeDirection(
-    const eLaneChangeDirection laneChangeDir,
-    const sEgo& ego)
-{
-    const eLaneName egoLane = ego.GetCurrentLaneName();
-
-    if (LCD_STRAIGHT == laneChangeDir)
-    {
-        return egoLane;
-    }
-
-    switch (laneChangeDir)
-    {
-    case LCD_LEFT:
-        return GetLeftLaneName(egoLane);
-        break;
-    case LCD_RIGHT:
-        return GetRightLaneName(egoLane);
-        break;
-    }
-
-    return LN_LANE_MIDDLE;
-}
-
 
 int LaneNameToLaneIdx(eLaneName laneName)
 {
