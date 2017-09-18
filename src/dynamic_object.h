@@ -25,6 +25,12 @@ struct sDynamicObject
         : id(id), x(x), y(y), vx(vx), vy(vy), s(s), d(d)
     {
     };
+
+    double GetSpeed() const
+    {
+        double speed = sqrt(pow(vx, 2) + pow(vy, 2));
+        return speed;
+    }
 };
 
 #endif // DYNAMIC_OBJECT_H

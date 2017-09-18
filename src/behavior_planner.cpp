@@ -29,235 +29,49 @@ sBehavior cBehaviorPlanner::Execute(
 
     // TODO: use behavior planner from lesson 4.16
 
-    sCurrentSituation roadSituation;
-    AnalyzeRoadSituation(
-        vehicles,
-        ego.s,
-        roadSituation);
+    cRoadSituation roadSituation;
+    roadSituation.AnalyzeRoadSituation(vehicles, ego.s);
 
     sBehavior plannedBehavior;
-    if (StayOnCurrentLaneAndAccelerateToMaxSpeed(roadSituation, ego, plannedBehavior))
+    if (StayOnCurrentLane(ego, roadSituation))
     {
-        //printf("StayOnCurrentLaneAndAccelerateToMaxSpeed\n");
-        return plannedBehavior;
-    }
-    else if (StayOnCurrentLaneAndAdaptSpeed(roadSituation, ego, plannedBehavior))
-    {
-        //printf("StayOnCurrentLaneAndAdaptSpeed\n");
+        //printf("StayOnCurrentLane\n");
+        const sLaneInfo& laneInfo = roadSituation.GetLaneInfo(ego.GetCurrentLaneName());
+
+        if (AccelerateToMaxSpeed(laneInfo, plannedBehavior))
+        {
+            return plannedBehavior;
+        }
+
+        AdaptSpeedToLeadingVehicle(laneInfo, plannedBehavior);
+
         return plannedBehavior;
     }
 
-    eLaneChangeDirection laneChange = SelectLaneChangeDirection(roadSituation, ego);
+    eLaneName targetLane = roadSituation.GetOptimalLaneForLaneChange(ego);
+    const sLaneInfo& targetLaneInfo = roadSituation.GetLaneInfo(targetLane);
 
-    // TODO: implement real behavior planning!
+    if (AccelerateToMaxSpeed(targetLaneInfo, plannedBehavior))
+    {
+        return plannedBehavior;
+    }
+
+    AdaptSpeedToLeadingVehicle(targetLaneInfo, plannedBehavior);
+
     return plannedBehavior;
 }
 
-double CalculateReferenceSpeed(
-    const std::vector<sDynamicObject>& dynamicObjects,
-    int& targetLane,
-    const sEgo& ego)
-{
-    bool too_close = false;
-
-    // to avoid hitting other cars: go through dynamic objects list and check
-    // if another car is in our lane
-    // if yes: check how close
-
-    double referenceSpeed = 1.0; // mph
-
-    sCurrentSituation roadInfo;
-    AnalyzeRoadSituation(
-        dynamicObjects,
-        ego.s,
-        roadInfo);
-
-    targetLane = 1;
-
-    sBehavior plannedBehavior;
-    if (StayOnCurrentLaneAndAccelerateToMaxSpeed(roadInfo, ego, plannedBehavior))
-    {
-        // stay on lane and accelerate to max speed
-
-        referenceSpeed = 5.0; // 5.0 results in a speed of approx. 50 mph
-    }
-    else
-    {
-        referenceSpeed = 5.0; // 5.0 results in a speed of approx. 50 mph
-
-        const eLaneChangeDirection changeDir =
-            SelectLaneChangeDirection(roadInfo, ego);
-
-        targetLane = GetLaneIdxFromLaneChangeDirection(changeDir, ego);
-    }
-
-    //// code from walkthrough
-    //// find reference speed to use
-    //// i is index of other car on the road 
-    //for (size_t i(0); i < dynamicObjects.size(); ++i)
-    //{
-    //    const sDynamicObject& dynObj = dynamicObjects[i];
-
-    //    // check if car is in ego lane:
-    //    // d is position of dynamic object on the road -> find out which lane
-    //    double d = dynObj.d;
-
-    //    // lane is our lane 
-    //    if (d < (2 + laneWidth * egoLane + 2) && d >(2 + laneWidth * egoLane - 2))
-    //    {
-    //        // so the car is in our lane
-    //        double vx = dynObj.vx;
-    //        double vy = dynObj.vy;
-
-    //        double dynObjSpeed = sqrt(vx * vx + vy * vy);
-    //        double check_car_s = dynObj.s;
-
-    //        // check_car_s can help us to predict where that car is in the future  
-    //        // if using previous points can project s value out
-    //        check_car_s += ((double)prevPathSize * 0.2 * dynObjSpeed); 
-
-    //        // check s values greater than mine and s gap
-    //        if ((check_car_s > ego.s) && (check_car_s - ego.s) < 30)
-    //        {
-    //            // check if our car is close to the other car -> if so, need to take action
-
-    //            // do some logic here, lower reference velocity so we dont crash into the car in front of us,
-    //            // could also flag to try to change lanes
-
-    //            referenceSpeed = 29.5; // mph
-
-    //            // lines below consider this flag and reduce speed
-    //            too_close = true;
-    //            if (egoLane > 0)
-    //            {
-    //                egoLane = 0; // set left lane as target lane
-    //            }
-    //        }
-    //    }
-    //}
-
-    //if (too_close)
-    //{
-    //    referenceSpeed -= 0.224; // this is somehow related to decelerating with 5 m/s^2
-    //}
-    //else if (referenceSpeed < 49.5)
-    //{
-    //    referenceSpeed += 0.224;
-    //}
-    //// end of code from walkthrough
-
-    return referenceSpeed;
-}
-
-void AnalyzeRoadSituation(
-    const std::vector<sDynamicObject>& vehicles,
-    const double egoS,
-    sCurrentSituation& currentSituation)
-{
-    SortDynamicObjectsByLane(vehicles, currentSituation);
-    FindLeadingDynamicObjectInLane(egoS, currentSituation.laneLeft);
-    FindLeadingDynamicObjectInLane(egoS, currentSituation.laneMiddle);
-    FindLeadingDynamicObjectInLane(egoS, currentSituation.laneRight);
-}
-
-void SortDynamicObjectsByLane(
-    const std::vector<sDynamicObject>& dynamicObjects,
-    sCurrentSituation& roadInfo)
-{
-    for (vector<sDynamicObject>::const_iterator iter = dynamicObjects.begin();
-        iter != dynamicObjects.end(); ++iter)
-    {
-        double d = (*iter).d;
-        if (roadInfo.laneLeft.IsWithinLaneBoundaries(d))
-        {
-            roadInfo.laneLeft.dynamicObjects.push_back(*iter);
-        }
-        else if (roadInfo.laneMiddle.IsWithinLaneBoundaries(d))
-        {
-            roadInfo.laneMiddle.dynamicObjects.push_back(*iter);
-        }
-        if (roadInfo.laneRight.IsWithinLaneBoundaries(d))
-        {
-            roadInfo.laneRight.dynamicObjects.push_back(*iter);
-        }
-    }
-}
-
-void FindLeadingDynamicObjectInLane(
-    const double egoS,
-    sLaneInfo& laneInfo)
-{
-    double closestS = numeric_limits<double>::max();
-
-    const vector<sDynamicObject>& dynamicObjects = laneInfo.dynamicObjects;
-    size_t closestIdx = dynamicObjects.size() + 1;
-
-    for (size_t i(0); i < dynamicObjects.size(); ++i)
-    {
-        double objS = dynamicObjects[i].s;
-        if (objS > egoS && objS < closestS)
-        {
-            closestS = objS;
-            closestIdx = i;
-        }
-    }
-
-    if (closestIdx < dynamicObjects.size())
-    {
-        laneInfo.leadingVehicleAhead = true;
-        laneInfo.leadingDynamicObject = dynamicObjects[closestIdx];
-        laneInfo.distanceToLeadingVehicle = closestS - egoS;
-    }
-    else
-    {
-        laneInfo.leadingVehicleAhead = false;
-    }
-}
-
-bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
-    const sCurrentSituation& roadInfo,
-    const sEgo& ego,
-    sBehavior& plannedBehavior)
-{
-    const eLaneName egoLane = ego.GetCurrentLaneName();
-
-    switch (egoLane)
-    {
-    case LN_LANE_LEFT:
-    {
-        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
-            roadInfo.laneLeft, plannedBehavior);
-    }
-    break;
-    case LN_LANE_MIDDLE:
-    {
-        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
-            roadInfo.laneMiddle, plannedBehavior);
-    }
-    break;
-    case LN_LANE_RIGHT:
-    {
-        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
-            roadInfo.laneRight, plannedBehavior);
-    }
-    break;
-    }
-
-    return false;
-}
-
-bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
+bool AccelerateToMaxSpeed(
     const sLaneInfo& laneInfo,
     sBehavior& plannedBehavior)
 {
-    if (    !laneInfo.leadingVehicleAhead
-        ||  laneInfo.distanceToLeadingVehicle > distanceKeepLane)
+    if (!laneInfo.IsLeadingVehicleAhead()
+        || laneInfo.IsDistanceToLeadingVehicleLarger(thresholdKeepLane))
     {
-        plannedBehavior = sBehavior(
-            laneInfo.laneName,
-            invalidVehicleId,
-            maxSpeed,
-            0.0);
+        plannedBehavior.targetLane = laneInfo.GetLaneName();
+        plannedBehavior.targetSpeed = maxSpeed;
+        plannedBehavior.secondsToReachTarget = 0.0;
+        plannedBehavior.targetLeadingVehicleId = invalidVehicleId;
 
         return true;
     }
@@ -265,122 +79,246 @@ bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
     return false;
 }
 
-
-bool StayOnCurrentLaneAndAdaptSpeed(
-    const sCurrentSituation& roadInfo,
-    const sEgo& ego,
+void AdaptSpeedToLeadingVehicle(
+    const sLaneInfo& laneInfo,
     sBehavior& plannedBehavior)
 {
-    const eLaneName egoLane = ego.GetCurrentLaneName();
+    plannedBehavior.targetLane = laneInfo.GetLaneName();
+    plannedBehavior.targetSpeed = laneInfo.GetSpeedOfLeadingVehicle();
+    plannedBehavior.secondsToReachTarget = 0.0;
+    plannedBehavior.targetLeadingVehicleId = laneInfo.GetLeadingVehicleId();
+}
 
-    switch (egoLane)
-    {
-    case LN_LANE_LEFT:
-    {
-        if (    roadInfo.laneMiddle.leadingVehicleAhead
-            &&  (   roadInfo.laneMiddle.distanceToLeadingVehicle 
-                 <  roadInfo.laneLeft.distanceToLeadingVehicle))
-        {
-            AdaptToLeadingVehicleInLane(roadInfo.laneLeft, plannedBehavior);
-            return true;
-        }
-    }
-    break;
-    case LN_LANE_MIDDLE:
-    {
-        double distanceLeadingVeh = roadInfo.laneMiddle.distanceToLeadingVehicle;
+//double CalculateReferenceSpeed(
+//    const std::vector<sDynamicObject>& dynamicObjects,
+//    int& targetLane,
+//    const sEgo& ego)
+//{
+//    bool too_close = false;
+//
+//    // to avoid hitting other cars: go through dynamic objects list and check
+//    // if another car is in our lane
+//    // if yes: check how close
+//
+//    double referenceSpeed = 1.0; // mph
+//
+//    cRoadSituation roadInfo;
+//    AnalyzeRoadSituation(
+//        dynamicObjects,
+//        ego.s,
+//        roadInfo);
+//
+//    targetLane = 1;
+//
+//    sBehavior plannedBehavior;
+//    if (StayOnCurrentLaneAndAccelerateToMaxSpeed(roadInfo, ego, plannedBehavior))
+//    {
+//        // stay on lane and accelerate to max speed
+//
+//        referenceSpeed = 5.0; // 5.0 results in a speed of approx. 50 mph
+//    }
+//    else
+//    {
+//        referenceSpeed = 5.0; // 5.0 results in a speed of approx. 50 mph
+//
+//        const eLaneChangeDirection changeDir =
+//            SelectLaneChangeDirection(roadInfo, ego);
+//
+//        targetLane = GetLaneIdxFromLaneChangeDirection(changeDir, ego);
+//    }
+//
+//    //// code from walkthrough
+//    //// find reference speed to use
+//    //// i is index of other car on the road 
+//    //for (size_t i(0); i < dynamicObjects.size(); ++i)
+//    //{
+//    //    const sDynamicObject& dynObj = dynamicObjects[i];
+//
+//    //    // check if car is in ego lane:
+//    //    // d is position of dynamic object on the road -> find out which lane
+//    //    double d = dynObj.d;
+//
+//    //    // lane is our lane 
+//    //    if (d < (2 + laneWidth * egoLane + 2) && d >(2 + laneWidth * egoLane - 2))
+//    //    {
+//    //        // so the car is in our lane
+//    //        double vx = dynObj.vx;
+//    //        double vy = dynObj.vy;
+//
+//    //        double dynObjSpeed = sqrt(vx * vx + vy * vy);
+//    //        double check_car_s = dynObj.s;
+//
+//    //        // check_car_s can help us to predict where that car is in the future  
+//    //        // if using previous points can project s value out
+//    //        check_car_s += ((double)prevPathSize * 0.2 * dynObjSpeed); 
+//
+//    //        // check s values greater than mine and s gap
+//    //        if ((check_car_s > ego.s) && (check_car_s - ego.s) < 30)
+//    //        {
+//    //            // check if our car is close to the other car -> if so, need to take action
+//
+//    //            // do some logic here, lower reference velocity so we dont crash into the car in front of us,
+//    //            // could also flag to try to change lanes
+//
+//    //            referenceSpeed = 29.5; // mph
+//
+//    //            // lines below consider this flag and reduce speed
+//    //            too_close = true;
+//    //            if (egoLane > 0)
+//    //            {
+//    //                egoLane = 0; // set left lane as target lane
+//    //            }
+//    //        }
+//    //    }
+//    //}
+//
+//    //if (too_close)
+//    //{
+//    //    referenceSpeed -= 0.224; // this is somehow related to decelerating with 5 m/s^2
+//    //}
+//    //else if (referenceSpeed < 49.5)
+//    //{
+//    //    referenceSpeed += 0.224;
+//    //}
+//    //// end of code from walkthrough
+//
+//    return referenceSpeed;
+//}
 
-        if (    roadInfo.laneLeft.leadingVehicleAhead
-            && (roadInfo.laneLeft.distanceToLeadingVehicle < distanceLeadingVeh)
-            &&  roadInfo.laneRight.leadingVehicleAhead
-            && (roadInfo.laneRight.distanceToLeadingVehicle < distanceLeadingVeh))
-        {
-            AdaptToLeadingVehicleInLane(roadInfo.laneMiddle, plannedBehavior);
-            return true;
-        }
-    }
-    break;
-    case LN_LANE_RIGHT:
+
+
+bool StayOnCurrentLane(
+    const sEgo& ego,
+    const cRoadSituation& roadInfo)
+{
+    const sLaneInfo& laneInfo = roadInfo.GetLaneInfo(ego.GetCurrentLaneName());
+
+    // no leading vehicle in ego lane or distance to leading vehicle is larger
+    // than threshold
+    if (    !laneInfo.IsLeadingVehicleAhead()
+        ||  laneInfo.IsDistanceToLeadingVehicleLarger(thresholdKeepLane))
     {
-        if (roadInfo.laneMiddle.leadingVehicleAhead
-            && (roadInfo.laneMiddle.distanceToLeadingVehicle
-                <  roadInfo.laneRight.distanceToLeadingVehicle))
-        {
-            AdaptToLeadingVehicleInLane(roadInfo.laneRight, plannedBehavior);
-            return true;
-        }
+        return true;
     }
-    break;
-    }
+
+    // distance to leading vehicle is the largest in ego lane
 
     return false;
 }
 
-void AdaptToLeadingVehicleInLane(const sLaneInfo& currentLane, sBehavior& behavior)
-{
-    const sDynamicObject& leadingVeh = currentLane.leadingDynamicObject;
-    double speed = sqrt(pow(leadingVeh.vx, 2) + pow(leadingVeh.vy, 2));
-    behavior = sBehavior(
-        LN_LANE_RIGHT,
-        leadingVeh.id,
-        speed,
-        0.0);
-}
+//bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
+//    const cRoadSituation& roadInfo,
+//    const sEgo& ego,
+//    sBehavior& plannedBehavior)
+//{
+//    const eLaneName egoLane = ego.GetCurrentLaneName();
+//
+//    switch (egoLane)
+//    {
+//    case LN_LANE_LEFT:
+//    {
+//        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
+//            roadInfo.laneLeft, plannedBehavior);
+//    }
+//    break;
+//    case LN_LANE_MIDDLE:
+//    {
+//        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
+//            roadInfo.laneMiddle, plannedBehavior);
+//    }
+//    break;
+//    case LN_LANE_RIGHT:
+//    {
+//        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
+//            roadInfo.laneRight, plannedBehavior);
+//    }
+//    break;
+//    }
+//
+//    return false;
+//}
 
-eLaneChangeDirection SelectLaneChangeDirection(
-    const sCurrentSituation& roadInfo,
-    const sEgo& ego)
-{
-    const eLaneName egoLane = ego.GetCurrentLaneName();
+//bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
+//    const sLaneInfo& laneInfo,
+//    sBehavior& plannedBehavior)
+//{
+//    if (    !laneInfo.leadingVehicleAhead
+//        ||  laneInfo.distanceToLeadingVehicle > thresholdKeepLane)
+//    {
+//        plannedBehavior = sBehavior(
+//            laneInfo.laneName,
+//            invalidVehicleId,
+//            maxSpeed,
+//            0.0);
+//
+//        return true;
+//    }
+//
+//    return false;
+//}
 
-    switch (egoLane)
-    {
-    case LN_LANE_LEFT:
-    {
-        if (    !roadInfo.laneMiddle.leadingVehicleAhead
-            ||  (   roadInfo.laneMiddle.distanceToLeadingVehicle
-                 >  roadInfo.laneLeft.distanceToLeadingVehicle))
-        {
-            return LCD_RIGHT;
-        }
-    }
-    break;
-    case LN_LANE_MIDDLE:
-    {
-        if (!roadInfo.laneLeft.leadingVehicleAhead)
-        {
-            return LCD_LEFT;
-        }
-        else if (!roadInfo.laneRight.leadingVehicleAhead)
-        {
-            return LCD_RIGHT;
-        }
-        else if (   roadInfo.laneLeft.distanceToLeadingVehicle
-                 >  roadInfo.laneRight.distanceToLeadingVehicle)
-        {
-            return LCD_LEFT;
-        }
-        else if (   roadInfo.laneRight.distanceToLeadingVehicle
-                 >  roadInfo.laneLeft.distanceToLeadingVehicle)
-        {
-            return LCD_RIGHT;
-        }
-    }
-    break;
-    case LN_LANE_RIGHT:
-    {
-        if (    !roadInfo.laneMiddle.leadingVehicleAhead
-            ||  (   roadInfo.laneMiddle.distanceToLeadingVehicle
-                 >  roadInfo.laneRight.distanceToLeadingVehicle))
-        {
-            return LCD_LEFT;
-        }
-    }
-    break;
-    }
 
-    return LCD_STRAIGHT;
-}
+//bool StayOnCurrentLaneAndAdaptSpeed(
+//    const cRoadSituation& roadInfo,
+//    const sEgo& ego,
+//    sBehavior& plannedBehavior)
+//{
+//    const eLaneName egoLane = ego.GetCurrentLaneName();
+//
+//    switch (egoLane)
+//    {
+//    case LN_LANE_LEFT:
+//    {
+//        if (    roadInfo.laneMiddle.leadingVehicleAhead
+//            &&  (   roadInfo.laneMiddle.distanceToLeadingVehicle 
+//                 <  roadInfo.laneLeft.distanceToLeadingVehicle))
+//        {
+//            AdaptToLeadingVehicleInLane(roadInfo.laneLeft, plannedBehavior);
+//            return true;
+//        }
+//    }
+//    break;
+//    case LN_LANE_MIDDLE:
+//    {
+//        double distanceLeadingVeh = roadInfo.laneMiddle.distanceToLeadingVehicle;
+//
+//        if (    roadInfo.laneLeft.leadingVehicleAhead
+//            && (roadInfo.laneLeft.distanceToLeadingVehicle < distanceLeadingVeh)
+//            &&  roadInfo.laneRight.leadingVehicleAhead
+//            && (roadInfo.laneRight.distanceToLeadingVehicle < distanceLeadingVeh))
+//        {
+//            AdaptToLeadingVehicleInLane(roadInfo.laneMiddle, plannedBehavior);
+//            return true;
+//        }
+//    }
+//    break;
+//    case LN_LANE_RIGHT:
+//    {
+//        if (roadInfo.laneMiddle.leadingVehicleAhead
+//            && (roadInfo.laneMiddle.distanceToLeadingVehicle
+//                <  roadInfo.laneRight.distanceToLeadingVehicle))
+//        {
+//            AdaptToLeadingVehicleInLane(roadInfo.laneRight, plannedBehavior);
+//            return true;
+//        }
+//    }
+//    break;
+//    }
+//
+//    return false;
+//}
+
+//void AdaptToLeadingVehicleInLane(const sLaneInfo& currentLane, sBehavior& behavior)
+//{
+//    const sDynamicObject& leadingVeh = currentLane.leadingVehicle;
+//    double speed = sqrt(pow(leadingVeh.vx, 2) + pow(leadingVeh.vy, 2));
+//    behavior = sBehavior(
+//        LN_LANE_RIGHT,
+//        leadingVeh.id,
+//        speed,
+//        0.0);
+//}
+
 
 int GetLaneIdxFromLaneChangeDirection(
     const eLaneChangeDirection laneChangeDir,

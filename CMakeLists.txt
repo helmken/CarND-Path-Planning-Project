@@ -2,8 +2,6 @@ project(Path_Planning)
 
 cmake_minimum_required (VERSION 3.5)
 
-#add_definitions(-std=c++11 -O3 -DHAVE_STDDEF_H)
-#add_definitions(-std=c++11 -O0 -DHAVE_STDDEF_H -D_USE_MATH_DEFINES)
 add_definitions(-std=c++11 -DHAVE_STDDEF_H -D_USE_MATH_DEFINES)
 
 
@@ -15,14 +13,18 @@ set(sources
     src/behavior_planner.h
     src/conversion_helpers.cpp
     src/conversion_helpers.h
-    src/current_situation.h
     src/dynamic_object.h
+    src/ego.cpp
     src/ego.h
     src/json.hpp
+    src/lane_info.cpp
+    src/lane_info.h
     src/main.cpp
     src/path.h
     src/path_planner.cpp
     src/path_planner.h
+    src/road_situation.cpp
+    src/road_situation.h
     src/simulator_message_reader.h
     src/spline.h
     src/trajectory_planner.cpp

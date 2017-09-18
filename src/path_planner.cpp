@@ -31,10 +31,12 @@ sPath cPathPlanner::Execute(
     ///////////////////////////////////////////////////////////////////////////
     int targetLane = 1;
 
-    double ref_vel = CalculateReferenceSpeed(
-        vehicles,
-        targetLane,
-        ego);
+    //double ref_vel = CalculateReferenceSpeed(
+    //    vehicles,
+    //    targetLane,
+    //    ego);
+
+    double ref_vel = 5.0;
     
     sPath newPath = GeneratePath(
         ego, 

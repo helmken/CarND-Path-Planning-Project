@@ -4,18 +4,10 @@
 
 #include <vector>
 
-#include "current_situation.h"
+#include "road_situation.h"
 #include "dynamic_object.h"
 #include "ego.h"
 #include "path.h"
-
-
-enum eLaneChangeDirection
-{
-    LCD_LEFT,
-    LCD_STRAIGHT,
-    LCD_RIGHT
-};
 
 
 // general tasks that will be handled by trajectory planner 
@@ -36,7 +28,7 @@ enum eEgoState
 //const double maxSpeed(49.9);  // this is in miles per hour
 const double maxSpeed(5.0); // meters per second
 
-const double distanceKeepLane(30.0);
+const double thresholdKeepLane(30.0);
 
 const int invalidVehicleId(-1);
 
@@ -110,45 +102,47 @@ private:
     cTrajectoryPlanner* m_trajectoryPlanner;
 };
 
-double CalculateReferenceSpeed(
-    const std::vector<sDynamicObject>& dynamicObjects,
-    int& egoLane,
-    const sEgo& ego);
+//double CalculateReferenceSpeed(
+//    const std::vector<sDynamicObject>& dynamicObjects,
+//    int& egoLane,
+//    const sEgo& ego);
 
 void AnalyzeRoadSituation(
     const std::vector<sDynamicObject>& vehicles,
     const double egoS,
-    sCurrentSituation& currentSituation);
+    cRoadSituation& currentSituation);
 
-void SortDynamicObjectsByLane(
-    const std::vector<sDynamicObject>& dynamicObjects,
-    sCurrentSituation& roadInfo);
-
-void FindLeadingDynamicObjectInLane(
-    const double egoS,
-    sLaneInfo& laneInfo);
-
-bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
-    const sCurrentSituation& roadInfo,
+bool StayOnCurrentLane(
     const sEgo& ego,
-    sBehavior& plannedBehavior);
+    const cRoadSituation& roadInfo
+);
 
-bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
+bool AccelerateToMaxSpeed(
     const sLaneInfo& laneInfo,
     sBehavior& plannedBehavior);
 
-bool StayOnCurrentLaneAndAdaptSpeed(
-    const sCurrentSituation& roadInfo,
-    const sEgo& ego,
+void AdaptSpeedToLeadingVehicle(
+    const sLaneInfo& laneInfo,
     sBehavior& plannedBehavior);
 
-void AdaptToLeadingVehicleInLane(
-    const sLaneInfo& currentLane, 
-    sBehavior& behavior);
 
-eLaneChangeDirection SelectLaneChangeDirection(
-    const sCurrentSituation& roadInfo,
-    const sEgo& ego);
+//bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
+//    const cRoadSituation& roadInfo,
+//    const sEgo& ego,
+//    sBehavior& plannedBehavior);
+
+//bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
+//    const sLaneInfo& laneInfo,
+//    sBehavior& plannedBehavior);
+
+//bool StayOnCurrentLaneAndAdaptSpeed(
+//    const cRoadSituation& roadInfo,
+//    const sEgo& ego,
+//    sBehavior& plannedBehavior);
+
+//void AdaptToLeadingVehicleInLane(
+//    const sLaneInfo& currentLane, 
+//    sBehavior& behavior);
 
 int GetLaneIdxFromLaneChangeDirection(
     const eLaneChangeDirection laneChangeDir,
