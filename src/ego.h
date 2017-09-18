@@ -29,7 +29,7 @@ struct sEgo
     {
     }
 
-    eLaneName GetCurrentLane()
+    eLaneName GetCurrentLaneName() const
     {
         if (d >= 0.0 && d < laneWidth)
         {

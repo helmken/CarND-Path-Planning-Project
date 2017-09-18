@@ -9,18 +9,10 @@
 using namespace std;
 
 
-// maximum allowed speed
-const double maxSpeed(49.9);
-
-
-const double distanceKeepLane(30.0);  
-
-
 cBehaviorPlanner::cBehaviorPlanner()
     : m_egoState(ES_LANE_KEEP)
     , m_trajectoryPlanner(nullptr)
 {
-
 }
 
 void cBehaviorPlanner::Init(cTrajectoryPlanner* trajectoryPlanner)
@@ -28,20 +20,41 @@ void cBehaviorPlanner::Init(cTrajectoryPlanner* trajectoryPlanner)
     m_trajectoryPlanner = trajectoryPlanner;
 }
 
-sPath cBehaviorPlanner::Execute() // TODO: input params: map, route, predictions
+sBehavior cBehaviorPlanner::Execute(
+    const sEgo& ego,
+    const std::vector<sDynamicObject>& vehicles)
 {
     //def transition_function(predictions, current_fsm_state, current_pose, cost_functions, weights) :    //    # only consider states which can be reached from current FSM state.    //    possible_successor_states = successor_states(current_fsm_state)            //    # keep track of the total cost of each state.    //    costs = []    //    for state in possible_successor_states :    //      # generate a rough idea of what trajectory we would    //      # follow IF we chose this state.    //      trajectory_for_state = generate_trajectory(state, current_pose, predictions)    //          //      # calculate the "cost" associated with that trajectory.    //      cost_for_state = 0    //      for i in range(len(cost_functions)) :    //        # apply each cost function to the generated trajectory    //        cost_function = cost_functions[i]    //        cost_for_cost_function = cost_function(trajectory_for_state, predictions)                            //    //        # multiply the cost by the associated weight    //        weight = weights[i]    //        cost_for_state += weight * cost_for_cost_function    //        costs.append({ 'state' : state, 'cost' : cost_for_state })            //    //        # Find the minimum cost state.    //        best_next_state = None    //        min_cost = 9999999    //        for i in range(len(possible_successor_states)) :    //            state = possible_successor_states[i]    //            cost = costs[i]    //            if cost < min_cost :    //                min_cost = cost    //                best_next_state = state     
     //  return best_next_state
 
     // TODO: use behavior planner from lesson 4.16
 
-    sPath plannedPath;
+    sCurrentSituation roadSituation;
+    AnalyzeRoadSituation(
+        vehicles,
+        ego.s,
+        roadSituation);
+
+    sBehavior plannedBehavior;
+    if (StayOnCurrentLaneAndAccelerateToMaxSpeed(roadSituation, ego, plannedBehavior))
+    {
+        //printf("StayOnCurrentLaneAndAccelerateToMaxSpeed\n");
+        return plannedBehavior;
+    }
+    else if (StayOnCurrentLaneAndAdaptSpeed(roadSituation, ego, plannedBehavior))
+    {
+        //printf("StayOnCurrentLaneAndAdaptSpeed\n");
+        return plannedBehavior;
+    }
+
+    eLaneChangeDirection laneChange = SelectLaneChangeDirection(roadSituation, ego);
+
     // TODO: implement real behavior planning!
-    return plannedPath;
+    return plannedBehavior;
 }
 
 double CalculateReferenceSpeed(
-    const std::vector<sDynamicObject>& dynamicObjects, 
+    const std::vector<sDynamicObject>& dynamicObjects,
     int& targetLane,
     const sEgo& ego)
 {
@@ -54,14 +67,15 @@ double CalculateReferenceSpeed(
     double referenceSpeed = 1.0; // mph
 
     sCurrentSituation roadInfo;
-    AnalyseRoadSituation(
+    AnalyzeRoadSituation(
         dynamicObjects,
         ego.s,
         roadInfo);
 
     targetLane = 1;
 
-    if (StayOnCurrentLane(roadInfo, ego))
+    sBehavior plannedBehavior;
+    if (StayOnCurrentLaneAndAccelerateToMaxSpeed(roadInfo, ego, plannedBehavior))
     {
         // stay on lane and accelerate to max speed
 
@@ -135,7 +149,7 @@ double CalculateReferenceSpeed(
     return referenceSpeed;
 }
 
-void AnalyseRoadSituation(
+void AnalyzeRoadSituation(
     const std::vector<sDynamicObject>& vehicles,
     const double egoS,
     sCurrentSituation& currentSituation)
@@ -200,120 +214,180 @@ void FindLeadingDynamicObjectInLane(
     }
 }
 
-bool StayOnCurrentLane(
+bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
     const sCurrentSituation& roadInfo,
-    const sEgo& ego)
+    const sEgo& ego,
+    sBehavior& plannedBehavior)
 {
-    const eLaneName egoLane = DToLaneName(ego.d);
+    const eLaneName egoLane = ego.GetCurrentLaneName();
 
     switch (egoLane)
     {
     case LN_LANE_LEFT:
-        {
-            if (    !roadInfo.laneLeft.leadingVehicleAhead
-                ||  roadInfo.laneLeft.distanceToLeadingVehicle > distanceKeepLane)
-            {
-                return true;
-            }
-        }
-        break;
+    {
+        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
+            roadInfo.laneLeft, plannedBehavior);
+    }
+    break;
     case LN_LANE_MIDDLE:
-        if (!roadInfo.laneMiddle.leadingVehicleAhead
-            || roadInfo.laneMiddle.distanceToLeadingVehicle > distanceKeepLane)
-        {
-            return true;
-        }
-        break;
+    {
+        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
+            roadInfo.laneMiddle, plannedBehavior);
+    }
+    break;
     case LN_LANE_RIGHT:
-        if (!roadInfo.laneMiddle.leadingVehicleAhead
-            || roadInfo.laneMiddle.distanceToLeadingVehicle > distanceKeepLane)
-        {
-            return true;
-        }
-        break;
+    {
+        return StayOnCurrentLaneAndAccelerateToMaxSpeed(
+            roadInfo.laneRight, plannedBehavior);
+    }
+    break;
     }
 
     return false;
+}
+
+bool StayOnCurrentLaneAndAccelerateToMaxSpeed(
+    const sLaneInfo& laneInfo,
+    sBehavior& plannedBehavior)
+{
+    if (    !laneInfo.leadingVehicleAhead
+        ||  laneInfo.distanceToLeadingVehicle > distanceKeepLane)
+    {
+        plannedBehavior = sBehavior(
+            laneInfo.laneName,
+            invalidVehicleId,
+            maxSpeed,
+            0.0);
+
+        return true;
+    }
+
+    return false;
+}
+
+
+bool StayOnCurrentLaneAndAdaptSpeed(
+    const sCurrentSituation& roadInfo,
+    const sEgo& ego,
+    sBehavior& plannedBehavior)
+{
+    const eLaneName egoLane = ego.GetCurrentLaneName();
+
+    switch (egoLane)
+    {
+    case LN_LANE_LEFT:
+    {
+        if (    roadInfo.laneMiddle.leadingVehicleAhead
+            &&  (   roadInfo.laneMiddle.distanceToLeadingVehicle 
+                 <  roadInfo.laneLeft.distanceToLeadingVehicle))
+        {
+            AdaptToLeadingVehicleInLane(roadInfo.laneLeft, plannedBehavior);
+            return true;
+        }
+    }
+    break;
+    case LN_LANE_MIDDLE:
+    {
+        double distanceLeadingVeh = roadInfo.laneMiddle.distanceToLeadingVehicle;
+
+        if (    roadInfo.laneLeft.leadingVehicleAhead
+            && (roadInfo.laneLeft.distanceToLeadingVehicle < distanceLeadingVeh)
+            &&  roadInfo.laneRight.leadingVehicleAhead
+            && (roadInfo.laneRight.distanceToLeadingVehicle < distanceLeadingVeh))
+        {
+            AdaptToLeadingVehicleInLane(roadInfo.laneMiddle, plannedBehavior);
+            return true;
+        }
+    }
+    break;
+    case LN_LANE_RIGHT:
+    {
+        if (roadInfo.laneMiddle.leadingVehicleAhead
+            && (roadInfo.laneMiddle.distanceToLeadingVehicle
+                <  roadInfo.laneRight.distanceToLeadingVehicle))
+        {
+            AdaptToLeadingVehicleInLane(roadInfo.laneRight, plannedBehavior);
+            return true;
+        }
+    }
+    break;
+    }
+
+    return false;
+}
+
+void AdaptToLeadingVehicleInLane(const sLaneInfo& currentLane, sBehavior& behavior)
+{
+    const sDynamicObject& leadingVeh = currentLane.leadingDynamicObject;
+    double speed = sqrt(pow(leadingVeh.vx, 2) + pow(leadingVeh.vy, 2));
+    behavior = sBehavior(
+        LN_LANE_RIGHT,
+        leadingVeh.id,
+        speed,
+        0.0);
 }
 
 eLaneChangeDirection SelectLaneChangeDirection(
     const sCurrentSituation& roadInfo,
     const sEgo& ego)
 {
-    const eLaneName egoLane = DToLaneName(ego.d);
+    const eLaneName egoLane = ego.GetCurrentLaneName();
 
     switch (egoLane)
     {
     case LN_LANE_LEFT:
+    {
+        if (    !roadInfo.laneMiddle.leadingVehicleAhead
+            ||  (   roadInfo.laneMiddle.distanceToLeadingVehicle
+                 >  roadInfo.laneLeft.distanceToLeadingVehicle))
         {
-            if (    !roadInfo.laneMiddle.leadingVehicleAhead
-                ||      roadInfo.laneMiddle.distanceToLeadingVehicle
-                    >   roadInfo.laneLeft.distanceToLeadingVehicle)
-            {
-                return LCD_RIGHT;
-            }
+            return LCD_RIGHT;
         }
-        break;
+    }
+    break;
     case LN_LANE_MIDDLE:
+    {
+        if (!roadInfo.laneLeft.leadingVehicleAhead)
         {
-            if (!roadInfo.laneLeft.leadingVehicleAhead)
-            {
-                return LCD_LEFT;
-            }
-            else if (!roadInfo.laneRight.leadingVehicleAhead)
-            {
-                return LCD_RIGHT;
-            }
-            else if (   roadInfo.laneLeft.distanceToLeadingVehicle
-                      > roadInfo.laneRight.distanceToLeadingVehicle)
-            {
-                return LCD_LEFT;
-            }
-            else if (   roadInfo.laneRight.distanceToLeadingVehicle
-                     >  roadInfo.laneLeft.distanceToLeadingVehicle)
-            {
-                return LCD_RIGHT;
-            }
+            return LCD_LEFT;
         }
-        break;
+        else if (!roadInfo.laneRight.leadingVehicleAhead)
+        {
+            return LCD_RIGHT;
+        }
+        else if (   roadInfo.laneLeft.distanceToLeadingVehicle
+                 >  roadInfo.laneRight.distanceToLeadingVehicle)
+        {
+            return LCD_LEFT;
+        }
+        else if (   roadInfo.laneRight.distanceToLeadingVehicle
+                 >  roadInfo.laneLeft.distanceToLeadingVehicle)
+        {
+            return LCD_RIGHT;
+        }
+    }
+    break;
     case LN_LANE_RIGHT:
+    {
+        if (    !roadInfo.laneMiddle.leadingVehicleAhead
+            ||  (   roadInfo.laneMiddle.distanceToLeadingVehicle
+                 >  roadInfo.laneRight.distanceToLeadingVehicle))
         {
-            if (    !roadInfo.laneMiddle.leadingVehicleAhead
-                ||      roadInfo.laneMiddle.distanceToLeadingVehicle
-                    >   roadInfo.laneRight.distanceToLeadingVehicle)
-            {
-                return LCD_LEFT;
-            }
+            return LCD_LEFT;
         }
-        break;
+    }
+    break;
     }
 
     return LCD_STRAIGHT;
-}
-
-eLaneName DToLaneName(const double d)
-{
-    if (d >= 0.0 && d < laneWidth)
-    {
-        return LN_LANE_LEFT;
-    }
-    else if (d >= laneWidth && d < 2.0 * laneWidth)
-    {
-        return LN_LANE_MIDDLE;
-    }
-    if (d >= 2.0 * laneWidth && d < 3.0 * laneWidth)
-    {
-        return LN_LANE_LEFT;
-    }
-
-    return LN_LANE_MIDDLE;
 }
 
 int GetLaneIdxFromLaneChangeDirection(
     const eLaneChangeDirection laneChangeDir,
     const sEgo& ego)
 {
-    const eLaneName egoLane = DToLaneName(ego.d);
+    const eLaneName egoLane = ego.GetCurrentLaneName();
+
     if (LCD_STRAIGHT == laneChangeDir)
     {
         return LaneNameToLaneIdx(egoLane);
@@ -331,6 +405,31 @@ int GetLaneIdxFromLaneChangeDirection(
 
     return 1;
 }
+
+eLaneName GetLaneNameFromLaneChangeDirection(
+    const eLaneChangeDirection laneChangeDir,
+    const sEgo& ego)
+{
+    const eLaneName egoLane = ego.GetCurrentLaneName();
+
+    if (LCD_STRAIGHT == laneChangeDir)
+    {
+        return egoLane;
+    }
+
+    switch (laneChangeDir)
+    {
+    case LCD_LEFT:
+        return GetLeftLaneName(egoLane);
+        break;
+    case LCD_RIGHT:
+        return GetRightLaneName(egoLane);
+        break;
+    }
+
+    return LN_LANE_MIDDLE;
+}
+
 
 int LaneNameToLaneIdx(eLaneName laneName)
 {
@@ -364,6 +463,20 @@ int GetLeftLaneIdx(eLaneName laneName)
     return 1;
 }
 
+eLaneName GetLeftLaneName(eLaneName laneName)
+{
+    if (LN_LANE_MIDDLE == laneName)
+    {
+        return LN_LANE_LEFT;
+    }
+    else if (LN_LANE_RIGHT == laneName)
+    {
+        return LN_LANE_MIDDLE;
+    }
+
+    return LN_LANE_MIDDLE;
+}
+
 int GetRightLaneIdx(eLaneName laneName)
 {
     if (LN_LANE_MIDDLE == laneName)
@@ -376,4 +489,30 @@ int GetRightLaneIdx(eLaneName laneName)
     }
 
     return 1;
+}
+
+eLaneName GetRightLaneName(eLaneName laneName)
+{
+    if (LN_LANE_MIDDLE == laneName)
+    {
+        return LN_LANE_RIGHT;
+    }
+    else if (LN_LANE_LEFT == laneName)
+    {
+        return LN_LANE_MIDDLE;
+    }
+
+    return LN_LANE_MIDDLE;
+}
+
+std::string ToString(const sBehavior& behavior)
+{
+    stringstream sstream;
+    sstream
+        << "target lane:" << behavior.targetLane
+        << ", leading vehicle ID: " << behavior.targetLeadingVehicleId
+        << ", target speed: " << behavior.targetSpeed
+        << ", seconds to reach target: " << behavior.secondsToReachTarget
+        << "\n";
+    return sstream.str();
 }

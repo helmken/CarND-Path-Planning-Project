@@ -24,7 +24,9 @@ sPath cPathPlanner::Execute(
     const std::vector<sDynamicObject>& vehicles,
     const sPath& previousPath)
 {
-    sPath plannedPath = m_behaviorPlanner->Execute();
+    sBehavior plannedBehavior = m_behaviorPlanner->Execute(
+        ego, vehicles);
+    printf(ToString(plannedBehavior).c_str());
 
     ///////////////////////////////////////////////////////////////////////////
     int targetLane = 1;

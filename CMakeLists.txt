@@ -11,8 +11,8 @@ set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
 set(sources
-    src/behavior_planner.h
     src/behavior_planner.cpp
+    src/behavior_planner.h
     src/conversion_helpers.cpp
     src/conversion_helpers.h
     src/current_situation.h
@@ -23,10 +23,10 @@ set(sources
     src/path.h
     src/path_planner.cpp
     src/path_planner.h
-    src/trajectory_planner.cpp
-    src/trajectory_planner.h
     src/simulator_message_reader.h
     src/spline.h
+    src/trajectory_planner.cpp
+    src/trajectory_planner.h
     src/visualization.cpp
     src/visualization.h
     src/waypoint_map.cpp
