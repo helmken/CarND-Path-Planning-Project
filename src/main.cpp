@@ -52,69 +52,80 @@ int main()
     cVisualization visualization(waypointMap);
     visualization.SetupGL();
 
-    uwsHub.onMessage(
-        [&pathPlanner, &visualization]
-        (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
+    try
     {
-        // "42" at the start of the message means there's a websocket message event.
-        // The 4 signifies a websocket message
-        // The 2 signifies a websocket event
-        //auto sdata = string(data).substr(0, length);
-        //cout << sdata << endl;
-        if (length && length > 2 && data[0] == '4' && data[1] == '2') 
+        uwsHub.onMessage(
+            [&pathPlanner, &visualization]
+        (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
         {
-            auto jsonString = hasData(data);
-
-            if (jsonString != "") 
+            // "42" at the start of the message means there's a websocket message event.
+            // The 4 signifies a websocket message
+            // The 2 signifies a websocket event
+            //auto sdata = string(data).substr(0, length);
+            //cout << sdata << endl;
+            if (length && length > 2 && data[0] == '4' && data[1] == '2')
             {
-                auto simMessage = json::parse(jsonString);
-                //cout << simMessage << "\n";
+                auto jsonString = hasData(data);
 
-                string simEventType = simMessage[0].get<string>();
-                if (simEventType == "telemetry")
+                if (jsonString != "")
                 {
-                    json telemetry = simMessage[1];
+                    auto simMessage = json::parse(jsonString);
+                    //cout << simMessage << "\n";
 
-                    // Main car's localization Data
-                    sEgo ego = ReadEgoFromJson(telemetry);
+                    string simEventType = simMessage[0].get<string>();
+                    if (simEventType == "telemetry")
+                    {
+                        json telemetry = simMessage[1];
 
-                    // Sensor Fusion Data, a list of all other cars on the same side of the road.
-                    json sensorFusion = telemetry["sensor_fusion"];
+                        // Main car's localization Data
+                        sEgo ego = ReadEgoFromJson(telemetry);
 
-                    vector<sDynamicObject> dynamicObjects = ReadDynamicObjectsFromJson(sensorFusion);
+                        // Sensor Fusion Data, a list of all other cars on the same side of the road.
+                        json sensorFusion = telemetry["sensor_fusion"];
 
-                    // Previous path data given to the Planner
-                    sPath previousPath = ReadPathFromJson(telemetry);
+                        vector<sDynamicObject> dynamicObjects = ReadDynamicObjectsFromJson(sensorFusion);
 
-                    sPath newPath = pathPlanner.Execute(
-                        ego, 
-                        dynamicObjects, 
-                        previousPath);
+                        // Previous path data given to the Planner
+                        sPath previousPath = ReadPathFromJson(telemetry);
 
-                    json msgJson;
-                    msgJson["next_x"] = newPath.coordsX;
-                    msgJson["next_y"] = newPath.coordsY;
+                        sPath newPath = pathPlanner.Execute(
+                            ego,
+                            dynamicObjects,
+                            previousPath);
 
-                    auto msg = "42[\"control\"," + msgJson.dump() + "]";
+                        json msgJson;
+                        msgJson["next_x"] = newPath.coordsX;
+                        msgJson["next_y"] = newPath.coordsY;
 
-                    //this_thread::sleep_for(chrono::milliseconds(1000));
+                        auto msg = "42[\"control\"," + msgJson.dump() + "]";
+
+                        //this_thread::sleep_for(chrono::milliseconds(1000));
+                        ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+                        visualization.Draw(
+                            ego,
+                            dynamicObjects,
+                            previousPath,
+                            newPath);
+                    }
+                }
+                else
+                {
+                    // Manual driving
+                    std::string msg = "42[\"manual\",{}]";
                     ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-
-                    visualization.Draw(
-                        ego, 
-                        dynamicObjects,
-                        previousPath,
-                        newPath);
                 }
             }
-            else 
-            {
-                // Manual driving
-                std::string msg = "42[\"manual\",{}]";
-                ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-            }
-        }
-    });
+        });
+    }
+    catch (std::exception& ex)
+    {
+        std::cerr << "exception: " << ex.what() << std::endl;
+    }
+    catch (...)
+    {
+        std::cerr << "exception thrown" << std::endl;
+    }
 
     // We don't need this since we're not using HTTP but if it's removed the
     // program doesn't compile :-(
