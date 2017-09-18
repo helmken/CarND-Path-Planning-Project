@@ -85,25 +85,44 @@ eLaneName cRoadSituation::GetOptimalLaneForLaneChange(
     double distanceLeadingVehicle = GetLaneInfo(ego.GetCurrentLaneName())
         .GetDistanceToLeadingVehicle();
 
-    if (    LN_LANE_LEFT != egoLane 
-        &&  laneLeft.GetDistanceToLeadingVehicle() > distanceLeadingVehicle)
+    // prefer middle lane to avoid crossing two lanes
+    if (LN_LANE_MIDDLE != egoLane)
     {
-        distanceLeadingVehicle = laneLeft.GetDistanceToLeadingVehicle();
-        resultLane = LN_LANE_LEFT;
+        if (!laneMiddle.IsLeadingVehicleAhead())
+        {
+            return LN_LANE_MIDDLE;
+        }
+        else if (laneMiddle.GetDistanceToLeadingVehicle() > distanceLeadingVehicle)
+        {
+            distanceLeadingVehicle = laneMiddle.GetDistanceToLeadingVehicle();
+            resultLane = LN_LANE_LEFT;
+        }
     }
 
-    if (    LN_LANE_MIDDLE != egoLane
-        &&  laneMiddle.GetDistanceToLeadingVehicle() > distanceLeadingVehicle)
+    if (LN_LANE_LEFT != egoLane)
     {
-        distanceLeadingVehicle = laneMiddle.GetDistanceToLeadingVehicle();
-        resultLane = LN_LANE_MIDDLE;
+        if (!laneLeft.IsLeadingVehicleAhead())
+        {
+            resultLane = LN_LANE_LEFT;
+        }
+        else if (laneLeft.GetDistanceToLeadingVehicle() > distanceLeadingVehicle)
+        {
+            distanceLeadingVehicle = laneLeft.GetDistanceToLeadingVehicle();
+            resultLane = LN_LANE_LEFT;
+        }
     }
 
-    if (    LN_LANE_RIGHT != egoLane
-        &&  laneRight.GetDistanceToLeadingVehicle() > distanceLeadingVehicle)
+    if (LN_LANE_RIGHT != egoLane)
     {
-        distanceLeadingVehicle = laneRight.GetDistanceToLeadingVehicle();
-        resultLane = LN_LANE_RIGHT;
+        if (!laneRight.IsLeadingVehicleAhead())
+        {
+            resultLane = LN_LANE_RIGHT;
+        }
+        else if (laneRight.GetDistanceToLeadingVehicle() > distanceLeadingVehicle)
+        {
+            distanceLeadingVehicle = laneRight.GetDistanceToLeadingVehicle();
+            resultLane = LN_LANE_RIGHT;
+        }
     }
 
     return resultLane;

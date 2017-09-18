@@ -29,7 +29,8 @@ sPath cPathPlanner::Execute(
     printf(ToString(plannedBehavior).c_str());
 
     ///////////////////////////////////////////////////////////////////////////
-    int targetLane = 1;
+    //int targetLane = 1;
+    int targetLane = LaneNameToLaneIdx(plannedBehavior.targetLane);
 
     //double ref_vel = CalculateReferenceSpeed(
     //    vehicles,
