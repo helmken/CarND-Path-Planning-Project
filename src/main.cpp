@@ -50,7 +50,7 @@ int main()
     cPathPlanner pathPlanner(waypointMap);
 
     cVisualization visualization(waypointMap);
-    visualization.SetupGL();
+    visualization.Run();
 
     try
     {
@@ -102,7 +102,7 @@ int main()
                         //this_thread::sleep_for(chrono::milliseconds(1000));
                         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
-                        visualization.Draw(
+                        visualization.Update(
                             ego,
                             dynamicObjects,
                             previousPath,
@@ -170,5 +170,5 @@ int main()
 
     uwsHub.run();
 
-    visualization.ShutdownGL();
+    visualization.Shutdown();
 }

@@ -3,10 +3,11 @@
 
 extern "C"
 {
-    // GLFW library for creating OpenGL content and managing user inputs
+// GLFW library for creating OpenGL content and managing user inputs
 #include <GLFW/glfw3.h>
 }
 
+#include <mutex>
 #include <vector>
 
 #include "dynamic_object.h"
@@ -18,17 +19,36 @@ extern "C"
 class cVisualization
 {
 private:
+    void SetupGL();
+    void ShutdownGL();
+
     GLFWwindow* m_GLWindow;
     const cWaypointMap& m_waypointMap;
+
+    // threading related members
+    std::thread m_visualizationThread;
+    std::mutex m_visualizationMutex;
+    bool m_shutdownVisualization;
+
+    // local copy of content that shall be visualized
+    sEgo m_ego;
+    std::vector<sDynamicObject> m_dynamicObjects;
+    sPath m_previousPath;
+    sPath m_newPath;
 
 public:
     cVisualization(const cWaypointMap& waypointMap);
 
-    void SetupGL();
+    // start visualization thread
+    void Run();
 
-    void ShutdownGL();
+    // shut down visualization thread 
+    void Shutdown();
 
-    void Draw(
+    // main function for visualization
+    void Visualize();
+
+    void Update(
         const sEgo& ego, 
         const std::vector<sDynamicObject>& dynamicObjects,
         const sPath& previousPath,

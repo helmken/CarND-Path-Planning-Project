@@ -17,6 +17,8 @@ struct sEgo
     double yaw; // yaw of ego vehicle
     double speed; // speed of ego vehicle
 
+    sEgo();
+
     sEgo(double x, double y, double s, double d, double yaw, double speed);
 
     eLaneName GetLaneName() const;

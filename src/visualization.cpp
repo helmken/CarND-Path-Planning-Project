@@ -12,8 +12,23 @@ const int WINDOWS_HEIGHT = 1024;
 
 cVisualization::cVisualization(const cWaypointMap& waypointMap)
     : m_GLWindow(NULL)
+    , m_shutdownVisualization(false)
     , m_waypointMap(waypointMap)
 {
+}
+
+void cVisualization::Run()
+{
+    m_visualizationThread = thread{ &cVisualization::Visualize, this };
+}
+
+void cVisualization::Shutdown()
+{
+    // indicate thread to shutdown
+    m_shutdownVisualization = true;
+
+    // wait until visualization thread has finished
+    m_visualizationThread.join();
 }
 
 void cVisualization::SetupGL()
@@ -53,13 +68,12 @@ void cVisualization::ShutdownGL()
     //exit(EXIT_SUCCESS);
 }
 
-void cVisualization::Draw(
-    const sEgo& ego,
-    const std::vector<sDynamicObject>& dynamicObjects,
-    const sPath& previousPath,
-    const sPath& newPath)
+void cVisualization::Visualize()
 {
-    //while (!glfwWindowShouldClose(m_GLWindow))
+    SetupGL();
+
+    while (!glfwWindowShouldClose(m_GLWindow)
+        && !m_shutdownVisualization)
     {
         int frameBuffWidth, frameBuffHeight;
         glfwGetFramebufferSize(m_GLWindow, &frameBuffWidth, &frameBuffHeight);
@@ -72,39 +86,59 @@ void cVisualization::Draw(
 
         glClear(GL_COLOR_BUFFER_BIT);
 
-        double left, right, bottom, top;
-        //BoundingBoxOfPaths(
-        //    left, right, bottom, top,
-        //    previousPath, newPath);
-        //BoundingBox(
-        //    left, right, bottom, top,
-        //    ego, dynamicObjects,
-        //    previousPath, newPath);
-        //m_waypointMap.GetMapBoundaries(left, right, bottom, top);
-        //const double padding = 50;
-        //left -= padding;
-        //right += padding;
-        //bottom -= padding;
-        //top += padding;
-        BoundingBoxEgo(left, right, bottom, top, ego);
+        {
+            // lock visualization mutex to read content for visualization
+            unique_lock<mutex> lock(m_visualizationMutex);
+            double left, right, bottom, top;
+            //BoundingBoxOfPaths(
+            //    left, right, bottom, top,
+            //    previousPath, newPath);
+            //BoundingBox(
+            //    left, right, bottom, top,
+            //    ego, dynamicObjects,
+            //    previousPath, newPath);
+            //m_waypointMap.GetMapBoundaries(left, right, bottom, top);
+            //const double padding = 50;
+            //left -= padding;
+            //right += padding;
+            //bottom -= padding;
+            //top += padding;
+            BoundingBoxEgo(left, right, bottom, top, m_ego);
 
-        SetupProjection(
-            left, right, bottom, top,
-            ratio, 5.0);
+            SetupProjection(
+                left, right, bottom, top,
+                ratio, 5.0);
 
-        DrawEgo(ego);
-        DrawDynamicObjects(dynamicObjects);
-        DrawPath(previousPath, false);
-        DrawPath(newPath, true);
+            DrawEgo(m_ego);
+            DrawDynamicObjects(m_dynamicObjects);
+            DrawPath(m_previousPath, false);
+            DrawPath(m_newPath, true);
+        }
 
         const vector<sWaypoint>& waypoints = m_waypointMap.GetWaypoints();
         DrawTrack(waypoints);
         DrawWaypoints(waypoints);
 
-
         glfwSwapBuffers(m_GLWindow);
         glfwPollEvents();
     }
+
+    ShutdownGL();
+}
+
+void cVisualization::Update(
+    const sEgo& ego,
+    const std::vector<sDynamicObject>& dynamicObjects,
+    const sPath& previousPath,
+    const sPath& newPath)
+{
+    // lock visualization mutex to write content for visualization
+    unique_lock<mutex> lock(m_visualizationMutex);
+    
+    m_ego = ego;
+    m_dynamicObjects = dynamicObjects;
+    m_previousPath = previousPath;
+    m_newPath = newPath;
 }
 
 void cVisualization::BoundingBox(
