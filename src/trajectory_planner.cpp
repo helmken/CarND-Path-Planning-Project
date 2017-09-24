@@ -45,14 +45,14 @@ sPath GeneratePath(
     vector<double> ptsx;
     vector<double> ptsy;
 
-    // reference x, y, yaw states
+    // reference (x, y, yaw) states
     // either we will reference the starting point as where the car is or at
     // the previous paths end point
     double ref_x = ego.x;
     double ref_y = ego.y;
     double ref_yaw = deg2rad(ego.yaw);
 
-    size_t prevPathSize = previousPath.coordsX.size();
+    const size_t prevPathSize = previousPath.coordsX.size();
 
     // if previous size is almost empty, use the car as starting reference
     if (prevPathSize < 2)
@@ -123,10 +123,11 @@ sPath GeneratePath(
     for (size_t i(0); i < ptsx.size(); ++i)
     {
         // shift car reference angle to 0 degrees (as in MPC project)
+        // 1) shift to origin
         double shift_x = ptsx[i] - ref_x;
         double shift_y = ptsy[i] - ref_y;
 
-        // rotate
+        // 2) rotate around yaw
         ptsx[i] = (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
         ptsy[i] = (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
     }

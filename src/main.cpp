@@ -78,15 +78,15 @@ int main()
                         json telemetry = simMessage[1];
 
                         // Main car's localization Data
-                        sEgo ego = ReadEgoFromJson(telemetry);
+                        sEgo ego = JsonReadEgo(telemetry);
 
                         // Sensor Fusion Data, a list of all other cars on the same side of the road.
                         json sensorFusion = telemetry["sensor_fusion"];
 
-                        vector<sDynamicObject> dynamicObjects = ReadDynamicObjectsFromJson(sensorFusion);
+                        vector<sDynamicObject> dynamicObjects = JsonReadDynamicObjects(sensorFusion);
 
                         // Previous path data given to the Planner
-                        sPath previousPath = ReadPathFromJson(telemetry);
+                        sPath previousPath = JsonReadPath(telemetry);
 
                         sPath newPath = pathPlanner.Execute(
                             ego,

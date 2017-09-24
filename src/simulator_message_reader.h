@@ -6,7 +6,7 @@
 #include "json.hpp"
 #include "path.h"
 
-sEgo ReadEgoFromJson(const nlohmann::json& telemetry)
+sEgo JsonReadEgo(const nlohmann::json& telemetry)
 {
     sEgo ego(
         telemetry["x"], 
@@ -19,7 +19,7 @@ sEgo ReadEgoFromJson(const nlohmann::json& telemetry)
     return ego;
 }
 
-sPath ReadPathFromJson(const nlohmann::json& telemetry)
+sPath JsonReadPath(const nlohmann::json& telemetry)
 {
     sPath path(
         telemetry["previous_path_x"],
@@ -45,7 +45,7 @@ sDynamicObject ReadDynamicObject(const nlohmann::json& sensorFusion)
     return dynamicObj;
 }
 
-std::vector<sDynamicObject> ReadDynamicObjectsFromJson(const nlohmann::json& sensorFusion)
+std::vector<sDynamicObject> JsonReadDynamicObjects(const nlohmann::json& sensorFusion)
 {
     std::vector<sDynamicObject> dynamicObjects;
     for (size_t i(0); i < sensorFusion.size(); ++i)
