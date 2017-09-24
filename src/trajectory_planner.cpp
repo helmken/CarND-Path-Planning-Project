@@ -31,6 +31,48 @@ sPath GeneratePath(
     return plannedPath;
 }
 
+// reference (x, y, yaw) state
+// either we will reference the starting point as where the car is or at
+// the previous paths end point
+void GetReferencePoints(
+    const sEgo& ego,
+    const sPath& previousPath,
+    s2DCoordCart& referencePoint,
+    s2DCoordCart& previousPoint,
+    double& referenceYaw)
+{
+    const size_t prevPathSize = previousPath.coordsX.size();
+
+    // if previous size is almost empty, use the car as starting reference
+    if (prevPathSize < 2)
+    {
+        // happens at the start of simulation...
+        // use two points that make the path tangent to the car
+
+        referencePoint.x = ego.x;
+        referencePoint.y = ego.y;
+        referenceYaw = deg2rad(ego.yaw);
+
+        previousPoint.x = ego.x - cos(ego.yaw);
+        previousPoint.y = ego.y - sin(ego.yaw);
+    }
+    else
+    {
+        // use the previous path's end point as starting reference
+
+        // redefine reference state as previous path end point
+        // use two points that make the path tangent to the previous path's end point
+        referencePoint.x = previousPath.coordsX[prevPathSize - 1];
+        referencePoint.y = previousPath.coordsY[prevPathSize - 1];
+
+        previousPoint.x = previousPath.coordsX[prevPathSize - 2];
+        previousPoint.y = previousPath.coordsY[prevPathSize - 2];
+        referenceYaw = atan2(
+            referencePoint.y - previousPoint.y, 
+            referencePoint.x - previousPoint.x);
+    }
+}
+
 sPath GeneratePath(
     const sEgo& ego, 
     const cWaypointMap& waypointMap,
@@ -45,48 +87,19 @@ sPath GeneratePath(
     vector<double> ptsx;
     vector<double> ptsy;
 
-    // reference (x, y, yaw) states
+    // reference (x, y, yaw) state
     // either we will reference the starting point as where the car is or at
     // the previous paths end point
-    double ref_x = ego.x;
-    double ref_y = ego.y;
-    double ref_yaw = deg2rad(ego.yaw);
+    s2DCoordCart referencePoint(0.0, 0.0);
+    s2DCoordCart previousPoint(0.0, 0.0);
+    double referenceYaw(0.0);
+    GetReferencePoints(ego, previousPath, referencePoint, previousPoint, referenceYaw);
 
-    const size_t prevPathSize = previousPath.coordsX.size();
+    ptsx.push_back(previousPoint.x);
+    ptsx.push_back(referencePoint.x);
 
-    // if previous size is almost empty, use the car as starting reference
-    if (prevPathSize < 2)
-    {
-        // happens at the start of simulation...
-        // use two points that make the path tangent to the car
-        double prev_car_x = ego.x - cos(ego.yaw);
-        double prev_car_y = ego.y - sin(ego.yaw);
-
-        ptsx.push_back(prev_car_x);
-        ptsx.push_back(ego.x);
-
-        ptsy.push_back(prev_car_y);
-        ptsy.push_back(ego.y);
-    }
-    else
-    {
-        // use the previous path's end point as starting reference
-
-        // redefine reference state as previous path end point
-        ref_x = previousPath.coordsX[prevPathSize - 1];
-        ref_y = previousPath.coordsY[prevPathSize - 1];
-
-        double ref_x_prev = previousPath.coordsX[prevPathSize - 2];
-        double ref_y_prev = previousPath.coordsY[prevPathSize - 2];
-        ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
-
-        // use two points that make the path tangent to the previous path's end point
-        ptsx.push_back(ref_x_prev);
-        ptsx.push_back(ref_x);
-
-        ptsy.push_back(ref_y_prev);
-        ptsy.push_back(ref_y);
-    }
+    ptsy.push_back(previousPoint.y);
+    ptsy.push_back(referencePoint.y);
 
     // in frenet frame add evenly 30m spaced points ahead of the starting reference
     const double frenetDCoord(2 + 4 * lane);
@@ -124,12 +137,12 @@ sPath GeneratePath(
     {
         // shift car reference angle to 0 degrees (as in MPC project)
         // 1) shift to origin
-        double shift_x = ptsx[i] - ref_x;
-        double shift_y = ptsy[i] - ref_y;
+        double shift_x = ptsx[i] - referencePoint.x;
+        double shift_y = ptsy[i] - referencePoint.y;
 
         // 2) rotate around yaw
-        ptsx[i] = (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
-        ptsy[i] = (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
+        ptsx[i] = (shift_x * cos(0 - referenceYaw) - shift_y * sin(0 - referenceYaw));
+        ptsy[i] = (shift_x * sin(0 - referenceYaw) + shift_y * cos(0 - referenceYaw));
     }
 
     // create a spline
@@ -164,11 +177,11 @@ sPath GeneratePath(
         double y_ref = y_point;
 
         // rotate back to normal after rotating it earlier
-        x_point = (x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw));
-        y_point = (x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw));
+        x_point = (x_ref * cos(referenceYaw) - y_ref * sin(referenceYaw));
+        y_point = (x_ref * sin(referenceYaw) + y_ref * cos(referenceYaw));
 
-        x_point += ref_x;
-        y_point += ref_y;
+        x_point += referencePoint.x;
+        y_point += referencePoint.y;
 
         newPath.coordsX.push_back(x_point);
         newPath.coordsY.push_back(y_point);
