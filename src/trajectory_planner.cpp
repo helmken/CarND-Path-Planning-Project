@@ -31,14 +31,25 @@ sPath GeneratePath(
     return plannedPath;
 }
 
+void PrintPathPoints(
+    const std::string& info,
+    const vector<s2DPtCart>& pathPoints)
+{
+    printf("%s\n", info.c_str());
+    for (size_t i(0); i < pathPoints.size(); ++i)
+    {
+        printf("%i: (%.3f,%.3f)\n", i, pathPoints[i].x, pathPoints[i].y);
+    }
+}
+
 // reference (x, y, yaw) state
 // either we will reference the starting point as where the car is or at
 // the previous paths end point
-void GetReferencePoints(
+void GetFirstTwoReferencePoints(
     const sEgo& ego,
     const sPath& previousPath,
-    s2DCoordCart& referencePoint,
-    s2DCoordCart& previousPoint,
+    s2DPtCart& referencePoint,
+    s2DPtCart& previousPoint,
     double& referenceYaw)
 {
     const size_t prevPathSize = previousPath.coordsX.size();
@@ -73,83 +84,113 @@ void GetReferencePoints(
     }
 }
 
+// create 5 reference points so that 
+// point 0 is the second last point on the path
+// point 1 is the last point on the path
+// points 2..4 are 30, 60, 90 meters ahead on the target lane
+void CreateFiveReferencePoints(
+    const sEgo& ego,
+    const cWaypointMap& waypointMap,
+    const sPath& previousPath,
+    const int targetLane,
+    vector<s2DPtCart>& referencePoints,
+    double& referenceYaw)
+{
+    // reference (x, y, yaw) state
+    // either we will reference the starting point as where the car is or at
+    // the previous paths end point
+    s2DPtCart referencePoint(0.0, 0.0);
+    s2DPtCart previousPoint(0.0, 0.0);
+    GetFirstTwoReferencePoints(
+        ego, previousPath,
+        referencePoint, previousPoint, referenceYaw);
+
+    referencePoints.push_back(previousPoint);
+    referencePoints.push_back(referencePoint);
+
+    // in frenet frame add evenly 30m spaced points ahead of the starting reference
+    const double frenetDCoord(2 + 4 * targetLane);
+    s2DPtCart nextWp30 = getXY(
+        ego.s + 30,
+        frenetDCoord,
+        waypointMap.GetMapPointsS(),
+        waypointMap.GetMapPointsX(),
+        waypointMap.GetMapPointsY());
+    referencePoints.push_back(nextWp30);
+
+    s2DPtCart nextWp60 = getXY(
+        ego.s + 60,
+        frenetDCoord,
+        waypointMap.GetMapPointsS(),
+        waypointMap.GetMapPointsX(),
+        waypointMap.GetMapPointsY());
+    referencePoints.push_back(nextWp60);
+
+    s2DPtCart nextWp90 = getXY(
+        ego.s + 90,
+        frenetDCoord,
+        waypointMap.GetMapPointsS(),
+        waypointMap.GetMapPointsX(),
+        waypointMap.GetMapPointsY());
+    referencePoints.push_back(nextWp90);
+}
+
+void SetSplinePoints(tk::spline& pathSpline, const vector<s2DPtCart>& pathPoints)
+{
+    vector<double> ptsx(pathPoints.size());
+    vector<double> ptsy(pathPoints.size());
+
+    for (size_t i(0); i < pathPoints.size(); ++i)
+    {
+        ptsx[i] = pathPoints[i].x;
+        ptsy[i] = pathPoints[i].y;
+    }
+
+    pathSpline.set_points(ptsx, ptsy);
+}
+
 sPath GeneratePath(
     const sEgo& ego, 
     const cWaypointMap& waypointMap,
     const sPath& previousPath, 
-    const int lane,
+    const int targetLane,
     const double referenceVelocity)
 {
     // create a list of widely spread (x, y) waypoints, evenly spaced at 30 m
     // later we will interpolate these waypoints with a spline and fill it in
     // with more points that control speed
 
-    vector<double> ptsx;
-    vector<double> ptsy;
-
-    // reference (x, y, yaw) state
-    // either we will reference the starting point as where the car is or at
-    // the previous paths end point
-    s2DCoordCart referencePoint(0.0, 0.0);
-    s2DCoordCart previousPoint(0.0, 0.0);
+    vector<s2DPtCart> referencePoints;
     double referenceYaw(0.0);
-    GetReferencePoints(ego, previousPath, referencePoint, previousPoint, referenceYaw);
 
-    ptsx.push_back(previousPoint.x);
-    ptsx.push_back(referencePoint.x);
+    CreateFiveReferencePoints(ego, waypointMap, previousPath, targetLane,
+        referencePoints, referenceYaw);
+    
+    // copy value to avoid overwriting during transformation
+    const s2DPtCart referencePoint = referencePoints[1];
 
-    ptsy.push_back(previousPoint.y);
-    ptsy.push_back(referencePoint.y);
-
-    // in frenet frame add evenly 30m spaced points ahead of the starting reference
-    const double frenetDCoord(2 + 4 * lane);
-    s2DCoordCart next_wp0 = getXY(
-        ego.s + 30,
-        frenetDCoord,
-        waypointMap.GetMapPointsS(),
-        waypointMap.GetMapPointsX(),
-        waypointMap.GetMapPointsY());
-
-    s2DCoordCart next_wp1 = getXY(
-        ego.s + 60,
-        frenetDCoord,
-        waypointMap.GetMapPointsS(),
-        waypointMap.GetMapPointsX(),
-        waypointMap.GetMapPointsY());
-
-    s2DCoordCart next_wp2 = getXY(
-        ego.s + 90,
-        frenetDCoord,
-        waypointMap.GetMapPointsS(),
-        waypointMap.GetMapPointsX(),
-        waypointMap.GetMapPointsY());
-
-    ptsx.push_back(next_wp0.x);
-    ptsx.push_back(next_wp1.x);
-    ptsx.push_back(next_wp2.x);
-
-    ptsy.push_back(next_wp0.y);
-    ptsy.push_back(next_wp1.y);
-    ptsy.push_back(next_wp2.y);
-
+    PrintPathPoints("path points", referencePoints);
+    
     // transformation to local car coordinates
-    for (size_t i(0); i < ptsx.size(); ++i)
+    for (size_t i(0); i < referencePoints.size(); ++i)
     {
         // shift car reference angle to 0 degrees (as in MPC project)
         // 1) shift to origin
-        double shift_x = ptsx[i] - referencePoint.x;
-        double shift_y = ptsy[i] - referencePoint.y;
+        double shift_x = referencePoints[i].x - referencePoint.x;
+        double shift_y = referencePoints[i].y - referencePoint.y;
 
         // 2) rotate around yaw
-        ptsx[i] = (shift_x * cos(0 - referenceYaw) - shift_y * sin(0 - referenceYaw));
-        ptsy[i] = (shift_x * sin(0 - referenceYaw) + shift_y * cos(0 - referenceYaw));
+        referencePoints[i].x = (shift_x * cos(-referenceYaw) - shift_y * sin(-referenceYaw));
+        referencePoints[i].y = (shift_x * sin(-referenceYaw) + shift_y * cos(-referenceYaw));
     }
+
+    PrintPathPoints("path points in local coordinates", referencePoints);
 
     // create a spline
     tk::spline pathSpline;
 
     // set (x, y) points to the spline
-    pathSpline.set_points(ptsx, ptsy);
+    SetSplinePoints(pathSpline, referencePoints);
 
     // define the actual (x, y) points we will use for the planner
     // start with all of the previous path points from last time
@@ -159,7 +200,7 @@ sPath GeneratePath(
     // at our desired reference velocity
     double target_x = 30.0;
     double target_y = pathSpline(target_x);
-    double target_dist = sqrt(target_x * target_x + target_y * target_y);
+    double target_dist = sqrt(pow(target_x, 2) + pow(target_y, 2));
 
     double x_add_on = 0;
 
@@ -244,7 +285,7 @@ s2DCoordFrenet getFrenet(
 
 // Transform from Frenet s,d coordinate to Cartesian x,y coordinate
 // TODO: according to slack getXY should not be used - instead splines should be used
-s2DCoordCart getXY(
+s2DPtCart getXY(
     const double s, const double d,
     const std::vector<double>& maps_s,
     const std::vector<double>& maps_x,
@@ -278,10 +319,10 @@ s2DCoordCart getXY(
     const double x = deltaX + d * cos(headingPerp);
     const double y = deltaY + d * sin(headingPerp);
 
-    return s2DCoordCart(x, y);
+    return s2DPtCart(x, y);
 }
 
-s2DCoordCart FrenetToCartesian(
+s2DPtCart FrenetToCartesian(
     const sWaypoint& wp0, const sWaypoint& wp1,
     const double s, const double d)
 {
@@ -300,5 +341,5 @@ s2DCoordCart FrenetToCartesian(
     const double x = deltaX + d * cos(headingPerp);
     const double y = deltaY + d * sin(headingPerp);
 
-    return s2DCoordCart(x, y);
+    return s2DPtCart(x, y);
 }

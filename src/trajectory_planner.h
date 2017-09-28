@@ -8,12 +8,12 @@
 #include "waypoint_map.h"
 
 
-struct s2DCoordCart
+struct s2DPtCart
 {
     double x;
     double y;
 
-    s2DCoordCart(double x, double y)
+    s2DPtCart(double x, double y)
         : x(x), y(y)
     {};
 };
@@ -53,13 +53,13 @@ s2DCoordFrenet getFrenet(
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
 // TODO: according to slack getXY should not be used - instead splines should be used
-s2DCoordCart getXY(
+s2DPtCart getXY(
     const double s, const double d,
     const std::vector<double>& maps_s,
     const std::vector<double>& maps_x,
     const std::vector<double>& maps_y);
 
-s2DCoordCart FrenetToCartesian(
+s2DPtCart FrenetToCartesian(
     const sWaypoint& wp0, const sWaypoint& wp1,
     const double s, const double d);
 
