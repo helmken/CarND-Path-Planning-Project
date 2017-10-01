@@ -4,20 +4,15 @@
 
 #include "conversion_helpers.h"
 
-// For converting back and forth between radians and degrees.
-constexpr double pi()
-{
-    return M_PI;
-}
 
 double deg2rad(double x)
 {
-    return x * pi() / 180;
+    return x * M_PI / 180;
 }
 
 double rad2deg(double x)
 {
-    return x * 180 / pi();
+    return x * 180 / M_PI;
 }
 
 double distance(double x1, double y1, double x2, double y2)
@@ -28,84 +23,90 @@ double distance(double x1, double y1, double x2, double y2)
 /**
 * returns waypoint that has the smallest distance
 */
-int ClosestWaypoint(
-    double x, double y,
-    std::vector<double> maps_x, std::vector<double> maps_y)
+int FindClosestWaypointIdx(
+    const double x, 
+    const double y,
+    const std::vector<double>& maps_x, 
+    const std::vector<double>& maps_y)
 {
     double closestLen = 100000; //large number
-    int closestWaypoint = 0;
+    int closestWaypointIdx = 0;
 
-    for (size_t i(0); i < maps_x.size(); i++)
+    for (size_t idx(0); idx < maps_x.size(); idx++)
     {
-        double map_x = maps_x[i];
-        double map_y = maps_y[i];
-        double dist = distance(x, y, map_x, map_y);
+        const double map_x = maps_x[idx];
+        const double map_y = maps_y[idx];
+        const double dist = distance(x, y, map_x, map_y);
         if (dist < closestLen)
         {
             closestLen = dist;
-            closestWaypoint = i;
+            closestWaypointIdx = idx;
         }
     }
 
-    return closestWaypoint;
+    return closestWaypointIdx;
 }
 
 /**
 * returns waypoint that makes most sense considering the current orientation
 */
-//int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
+//int FindNextWaypointIdx(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
 //{
-//    int closestWaypoint = ClosestWaypoint(x, y, maps_x, maps_y);
+//    int closestWaypointIdx = FindClosestWaypointIdx(x, y, maps_x, maps_y);
 //
-//    double map_x = maps_x[closestWaypoint];
-//    double map_y = maps_y[closestWaypoint];
+//    double map_x = maps_x[closestWaypointIdx];
+//    double map_y = maps_y[closestWaypointIdx];
 //
 //    double heading = atan2((map_y - y), (map_x - x));
 //
 //    double angle = abs(theta - heading);
 //
-//    //if (angle > pi() / 4)
+//    //if (angle > M_PI / 4)
 //    //{
-//    //    closestWaypoint++;
+//    //    closestWaypointIdx++;
 //    //}
 //
 //    // from slack: correct would be
-//    if (angle > pi() / 2)
+//    if (angle > M_PI / 2)
 //    {
-//        closestWaypoint++;
+//        closestWaypointIdx++;
 //    }
 //
-//    return closestWaypoint;
+//    return closestWaypointIdx;
 //}
 
 // version from excodecowboy:
 /**
 * returns waypoint that makes most sense considering the current orientation
 */
-int NextWaypoint(
-    double x, double y, double theta,
-    std::vector<double> maps_x, std::vector<double> maps_y)
+int FindNextWaypointIdx(
+    const double x, 
+    const double y, 
+    const double theta,
+    const std::vector<double>& maps_x, 
+    const std::vector<double>& maps_y)
 {
-    int closestWaypoint = ClosestWaypoint(x, y, maps_x, maps_y);
+    int closestWaypointIdx = FindClosestWaypointIdx(x, y, maps_x, maps_y);
 
-    double map_x = maps_x[closestWaypoint];
-    double map_y = maps_y[closestWaypoint];
+    const double map_x = maps_x[closestWaypointIdx];
+    const double map_y = maps_y[closestWaypointIdx];
 
-    double heading = atan2((map_y - y), (map_x - x));
+    const double heading = atan2((map_y - y), (map_x - x));
 
-    double theta_pos = fmod(theta + (2 * pi()), 2 * pi());
-    double heading_pos = fmod(heading + (2 * pi()), 2 * pi());
+    const double theta_pos = fmod(theta + (2 * M_PI), 2 * M_PI);
+    const double heading_pos = fmod(heading + (2 * M_PI), 2 * M_PI);
     double angle = abs(theta_pos - heading_pos);
-    if (angle > pi()) {
-        angle = (2 * pi()) - angle;
+    if (angle > M_PI) 
+    {
+        angle = (2 * M_PI) - angle;
     }
 
     std::cout << "heading:" << heading << " diff:" << angle << std::endl;
 
-    if (angle > pi() / 2)
+    if (angle > M_PI / 2)
     {
-        closestWaypoint = (closestWaypoint + 1) % maps_x.size();
+        closestWaypointIdx = (closestWaypointIdx + 1) % maps_x.size();
     }
 
-    return closestWaypoint;
+    return closestWaypointIdx;
 }

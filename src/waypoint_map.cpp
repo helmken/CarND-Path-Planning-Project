@@ -84,6 +84,40 @@ const double cWaypointMap::GetMaxS() const
     return m_waypoints[m_waypoints.size() - 1].s;
 }
 
+const int cWaypointMap::FindWaypointIdxForS(const double s) const
+{
+    if (s < 0)
+    {
+        return 0;
+    }
+
+    int right = m_waypoints.size() - 1;
+    if (s > m_waypoints[right].s)
+    {
+        throw std::invalid_argument(
+            "could not find waypoint for given frenet s coordinate");
+    }
+
+    int left = 0;
+    int pivot = (right - left) / 2;
+    while (left < (right - 1))
+    {
+        if (m_waypoints[pivot].s > s)
+        {
+            // continue search in left half
+            right = pivot;
+        }
+        else if (m_waypoints[pivot].s <= s)
+        {
+            // continue search in right half
+            left = pivot;
+        }
+        pivot = (right - left) / 2;
+    }
+
+    return right;
+}
+
 const std::vector<sWaypoint>& cWaypointMap::GetWaypoints() const
 {
     return m_waypoints;

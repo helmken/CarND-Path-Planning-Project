@@ -111,7 +111,7 @@ void CreateFiveReferencePoints(
     // in frenet frame add evenly 30m spaced points ahead of the starting reference
     const double frenetDCoord(2 + 4 * targetLane);
     s2DPtCart nextWp30 = getXY(
-        ego.s + 30,
+        ego.s + 30, 
         frenetDCoord,
         waypointMap.GetMapPointsS(),
         waypointMap.GetMapPointsX(),
@@ -148,6 +148,9 @@ void SetSplinePoints(tk::spline& pathSpline, const vector<s2DPtCart>& pathPoints
 
     pathSpline.set_points(ptsx, ptsy);
 }
+
+
+const unsigned int numOfPathPoints(50);
 
 sPath GeneratePath(
     const sEgo& ego, 
@@ -206,7 +209,7 @@ sPath GeneratePath(
 
     // fill up the rest of our path planner after filling it with previous points,
     // here we will always output 50 points
-    for (size_t i(1); i <= 50 - previousPath.coordsX.size(); ++i)
+    for (size_t i(1); i <= numOfPathPoints - previousPath.coordsX.size(); ++i)
     {
         double N = (target_dist / (0.2 * referenceVelocity / 2.24)); // 2.24 mph -> m/s
         double x_point = x_add_on + target_x / N;
@@ -217,7 +220,7 @@ sPath GeneratePath(
         double x_ref = x_point;
         double y_ref = y_point;
 
-        // rotate back to normal after rotating it earlier
+        // rotate back to initial orientation to revert earlier rotation
         x_point = (x_ref * cos(referenceYaw) - y_ref * sin(referenceYaw));
         y_point = (x_ref * sin(referenceYaw) + y_ref * cos(referenceYaw));
 
@@ -237,33 +240,33 @@ s2DCoordFrenet getFrenet(
     std::vector<double> maps_x,
     std::vector<double> maps_y)
 {
-    int next_wp = NextWaypoint(x, y, theta, maps_x, maps_y);
+    int next_wp = FindNextWaypointIdx(x, y, theta, maps_x, maps_y);
 
-    int prev_wp;
-    prev_wp = next_wp - 1;
+    int prev_wp = next_wp - 1;
     if (next_wp == 0)
     {
         prev_wp = maps_x.size() - 1;
     }
 
-    double n_x = maps_x[next_wp] - maps_x[prev_wp];
-    double n_y = maps_y[next_wp] - maps_y[prev_wp];
-    double x_x = x - maps_x[prev_wp];
-    double x_y = y - maps_y[prev_wp];
+    double mapDeltaX = maps_x[next_wp] - maps_x[prev_wp];
+    double mapDeltaY = maps_y[next_wp] - maps_y[prev_wp];
+    double dx = x - maps_x[prev_wp];
+    double dy = y - maps_y[prev_wp];
 
-    // find the projection of x onto n
-    double proj_norm = (x_x*n_x + x_y*n_y) / (n_x*n_x + n_y*n_y);
-    double proj_x = proj_norm*n_x;
-    double proj_y = proj_norm*n_y;
+    // find the projection of x onto normal from map
+    double projNorm =   (dx * mapDeltaX + dy * mapDeltaY) 
+                       / (mapDeltaX * mapDeltaX + mapDeltaY * mapDeltaY);
+    double projX = projNorm * mapDeltaX;
+    double projY = projNorm * mapDeltaY;
 
-    double frenet_d = distance(x_x, x_y, proj_x, proj_y);
+    double frenet_d = distance(dx, dy, projX, projY);
 
     //see if d value is positive or negative by comparing it to a center point
 
     double center_x = 1000 - maps_x[prev_wp];
     double center_y = 2000 - maps_y[prev_wp];
-    double centerToPos = distance(center_x, center_y, x_x, x_y);
-    double centerToRef = distance(center_x, center_y, proj_x, proj_y);
+    double centerToPos = distance(center_x, center_y, dx, dy);
+    double centerToRef = distance(center_x, center_y, projX, projY);
 
     if (centerToPos <= centerToRef)
     {
@@ -277,10 +280,9 @@ s2DCoordFrenet getFrenet(
         frenet_s += distance(maps_x[i], maps_y[i], maps_x[i + 1], maps_y[i + 1]);
     }
 
-    frenet_s += distance(0, 0, proj_x, proj_y);
+    frenet_s += distance(0, 0, projX, projY);
 
     return s2DCoordFrenet(frenet_s, frenet_d);
-    //return { frenet_s, frenet_d };
 }
 
 // Transform from Frenet s,d coordinate to Cartesian x,y coordinate
@@ -308,7 +310,7 @@ s2DPtCart getXY(
         (maps_y[waypointIdx1] - maps_y[waypointIdx0]), 
         (maps_x[waypointIdx1] - maps_x[waypointIdx0]));
     
-    // the x,y,s along the segment
+    // the x, y, s along the segment
     const double deltaS = (s - maps_s[waypointIdx0]);
 
     const double deltaX = maps_x[waypointIdx0] + deltaS * cos(heading);
