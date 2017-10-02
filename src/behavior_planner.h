@@ -25,7 +25,8 @@ enum eEgoState
 };
 
 
-const double maxSpeed(5.0); // meters per second
+//const double maxSpeed(5.0); // meters per second
+const double maxSpeed(4.5); // meters per second
 
 const double thresholdKeepLane(30.0);
 

@@ -34,16 +34,12 @@ sPath cPathPlanner::Execute(
 
         int targetLane = LaneNameToLaneIdx(plannedBehavior.targetLane);
 
-        //double ref_vel = 5.0;
-        double ref_vel = plannedBehavior.targetSpeed;
-
         newPath = GeneratePath(
             ego,
             m_waypointMap,
             previousPath,
             targetLane,
-            ref_vel);
-
+            plannedBehavior.targetSpeed);
     }
     catch (std::exception& ex)
     {

@@ -79,5 +79,14 @@ sPath GeneratePath(
     const cWaypointMap& waypointMap,
     const sPath& previousPath);
 
+std::vector<s2DPtCart> TransformToLocalCoordinates(
+    const s2DPtCart& referencePoint,
+    const double referenceYaw,
+    const std::vector<s2DPtCart>& points);
+
+std::vector<s2DPtCart> TransformToWorldCoordinates(
+    const s2DPtCart& referencePoint,
+    const double referenceYaw,
+    const std::vector<s2DPtCart>& points);
 
 #endif // TRAJECTORY_PLANNER_H

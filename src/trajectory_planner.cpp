@@ -42,6 +42,18 @@ void PrintPathPoints(
     }
 }
 
+void PrintPath(
+    const std::string& info,
+    const sPath& path)
+{
+    printf("%s\n", info.c_str());
+    for (size_t i(0); i < path.coordsX.size(); ++i)
+    {
+        printf("%i: (%.3f,%.3f)\n", i, path.coordsX[i], path.coordsY[i]);
+    }
+}
+
+
 // reference (x, y, yaw) state
 // either we will reference the starting point as where the car is or at
 // the previous paths end point
@@ -108,10 +120,13 @@ void CreateFiveReferencePoints(
     referencePoints.push_back(previousPoint);
     referencePoints.push_back(referencePoint);
 
+    const double waypointDist = previousPath.GetLength() > 30.0 ?
+        previousPath.GetLength() + 2 : 30.0;
+    
     // in frenet frame add evenly 30m spaced points ahead of the starting reference
     const double frenetDCoord(2 + 4 * targetLane);
     s2DPtCart nextWp30 = getXY(
-        ego.s + 30, 
+        ego.s + waypointDist, // + 30; 
         frenetDCoord,
         waypointMap.GetMapPointsS(),
         waypointMap.GetMapPointsX(),
@@ -149,6 +164,50 @@ void SetSplinePoints(tk::spline& pathSpline, const vector<s2DPtCart>& pathPoints
     pathSpline.set_points(ptsx, ptsy);
 }
 
+vector<s2DPtCart> TransformToLocalCoordinates(
+    const s2DPtCart& referencePoint,
+    const double referenceYaw,
+    const vector<s2DPtCart>& points)
+{
+    vector<s2DPtCart> transformed;
+
+    for (size_t i(0); i < points.size(); ++i)
+    {
+        // 1) shift to origin
+        const double shiftX = points[i].x - referencePoint.x;
+        const double shiftY = points[i].y - referencePoint.y;
+
+        // 2) rotate around yaw
+        const double rotX = (shiftX * cos(-referenceYaw) - shiftY * sin(-referenceYaw));
+        const double rotY = (shiftX * sin(-referenceYaw) + shiftY * cos(-referenceYaw));
+
+        transformed.push_back(s2DPtCart(rotX, rotY));
+    }
+
+    return transformed;
+}
+
+vector<s2DPtCart> TransformToWorldCoordinates(
+    const s2DPtCart& referencePoint,
+    const double referenceYaw,
+    const vector<s2DPtCart>& points)
+{
+    vector<s2DPtCart> transformed;
+
+    for (size_t i(0); i < points.size(); ++i)
+    {
+        // rotate back to initial orientation to revert earlier rotation
+        double x = (points[i].x * cos(referenceYaw) - points[i].y * sin(referenceYaw));
+        double y = (points[i].x * sin(referenceYaw) + points[i].y * cos(referenceYaw));
+
+        x += referencePoint.x;
+        y += referencePoint.y;
+
+        transformed.push_back(s2DPtCart(x, y));
+    }
+
+    return transformed;
+}
 
 const unsigned int numOfPathPoints(50);
 
@@ -169,31 +228,23 @@ sPath GeneratePath(
     CreateFiveReferencePoints(ego, waypointMap, previousPath, targetLane,
         referencePoints, referenceYaw);
     
-    // copy value to avoid overwriting during transformation
+    // copy reference point to avoid overwriting during transformation
     const s2DPtCart referencePoint = referencePoints[1];
 
-    PrintPathPoints("path points", referencePoints);
-    
-    // transformation to local car coordinates
-    for (size_t i(0); i < referencePoints.size(); ++i)
-    {
-        // shift car reference angle to 0 degrees (as in MPC project)
-        // 1) shift to origin
-        double shift_x = referencePoints[i].x - referencePoint.x;
-        double shift_y = referencePoints[i].y - referencePoint.y;
+    printf("ego position: %s\n", ToString(ego).c_str());
+    //PrintPath("previous path", previousPath);
+    PrintPathPoints("reference points", referencePoints);
 
-        // 2) rotate around yaw
-        referencePoints[i].x = (shift_x * cos(-referenceYaw) - shift_y * sin(-referenceYaw));
-        referencePoints[i].y = (shift_x * sin(-referenceYaw) + shift_y * cos(-referenceYaw));
-    }
+    vector<s2DPtCart> localCoords = TransformToLocalCoordinates(
+        referencePoint, referenceYaw, referencePoints);
 
-    PrintPathPoints("path points in local coordinates", referencePoints);
+    PrintPathPoints("reference points in local coordinates", localCoords);
 
     // create a spline
     tk::spline pathSpline;
 
     // set (x, y) points to the spline
-    SetSplinePoints(pathSpline, referencePoints);
+    SetSplinePoints(pathSpline, localCoords);
 
     // define the actual (x, y) points we will use for the planner
     // start with all of the previous path points from last time
@@ -201,34 +252,40 @@ sPath GeneratePath(
 
     // calculate how to break up spline points so that we travel
     // at our desired reference velocity
-    double target_x = 30.0;
-    double target_y = pathSpline(target_x);
-    double target_dist = sqrt(pow(target_x, 2) + pow(target_y, 2));
+    double splineTargetX = 30.0;
+    double splineTargetY = pathSpline(splineTargetX);
+    double splineTargetDistance = sqrt(pow(splineTargetX, 2) + pow(splineTargetY, 2));
 
-    double x_add_on = 0;
+    double splineSamplePos = 0;
+
+    const double numOfSteps = (splineTargetDistance / (0.2 * referenceVelocity / 2.24)); // 2.24 mph -> m/s
+    const double stepSize = splineTargetX / numOfSteps;
+
+    vector<s2DPtCart> additionalPathPoints;
 
     // fill up the rest of our path planner after filling it with previous points,
     // here we will always output 50 points
-    for (size_t i(1); i <= numOfPathPoints - previousPath.coordsX.size(); ++i)
+    const unsigned int prevPathSize = previousPath.coordsX.size();
+    for (size_t i(1); i <= numOfPathPoints - prevPathSize; ++i)
     {
-        double N = (target_dist / (0.2 * referenceVelocity / 2.24)); // 2.24 mph -> m/s
-        double x_point = x_add_on + target_x / N;
-        double y_point = pathSpline(x_point);
+        double ptX = splineSamplePos + stepSize;
+        double ptY = pathSpline(ptX);
 
-        x_add_on = x_point;
+        splineSamplePos = ptX;
 
-        double x_ref = x_point;
-        double y_ref = y_point;
+        additionalPathPoints.push_back(s2DPtCart(ptX, ptY));
+    }
 
-        // rotate back to initial orientation to revert earlier rotation
-        x_point = (x_ref * cos(referenceYaw) - y_ref * sin(referenceYaw));
-        y_point = (x_ref * sin(referenceYaw) + y_ref * cos(referenceYaw));
+    additionalPathPoints = TransformToWorldCoordinates(
+        referencePoint, referenceYaw, additionalPathPoints);
 
-        x_point += referencePoint.x;
-        y_point += referencePoint.y;
+    for (size_t i(0); i < additionalPathPoints.size(); ++i)
+    {
+        newPath.coordsX.push_back(additionalPathPoints[i].x);
+        newPath.coordsY.push_back(additionalPathPoints[i].y);
 
-        newPath.coordsX.push_back(x_point);
-        newPath.coordsY.push_back(y_point);
+        printf("adding point %i (%.3f,%.3f), numOfSteps=%.3f, stepSize=%.3f\n", 
+            i + prevPathSize, additionalPathPoints[i].x, additionalPathPoints[i].y, numOfSteps, stepSize);
     }
 
     return newPath;

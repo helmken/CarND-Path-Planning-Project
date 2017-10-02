@@ -24,4 +24,6 @@ struct sEgo
     eLaneName GetLaneName() const;
 };
 
+std::string ToString(const sEgo& ego);
+
 #endif // EGO_H

@@ -20,6 +20,17 @@ struct sPath
         , endS(endS), endD(endD)
     {
     };
+
+    double GetLength() const
+    {
+        if (coordsX.empty())
+        {
+            return 0;
+        }
+
+        return sqrt(  pow(coordsX[coordsX.size() - 1] - coordsX[0], 2)
+                    + pow(coordsY[coordsY.size() - 1] - coordsY[0], 2));
+    }
 };
 
 #endif // PATH_H

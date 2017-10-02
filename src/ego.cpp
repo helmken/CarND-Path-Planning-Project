@@ -1,8 +1,14 @@
+#include <sstream>
+
 #include "ego.h"
 
 
 // jwdunn1 [00:34]
 // The "collider" on the car measures 4.47x2.43
+
+
+using namespace std;
+
 
 sEgo::sEgo()
     : x(0.0), y(0.0)
@@ -32,4 +38,15 @@ eLaneName sEgo::GetLaneName() const
     }
 
     return LN_UNDEFINED;
+}
+
+std::string ToString(const sEgo& ego)
+{
+    std::stringstream strstream;
+    strstream 
+        << "(x,y)=(" << ego.x << "," << ego.y 
+        << "), (s,d)=(" << ego.s << "," << ego.d 
+        << "), yaw=" << ego.yaw << ", speed=" << ego.speed;
+
+    return strstream.str();
 }
