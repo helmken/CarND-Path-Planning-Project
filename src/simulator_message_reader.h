@@ -39,8 +39,7 @@ sDynamicObject ReadDynamicObject(const nlohmann::json& sensorFusion)
             sensorFusion[3],
             sensorFusion[4],
             sensorFusion[5],
-            sensorFusion[6]
-            );
+            sensorFusion[6]);
 
     return dynamicObj;
 }

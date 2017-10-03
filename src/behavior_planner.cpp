@@ -34,7 +34,8 @@ sBehavior cBehaviorPlanner::Execute(
     roadSituation.AnalyzeRoadSituation(vehicles, ego.s);
 
     sBehavior plannedBehavior;
-    if (StayOnCurrentLane(ego, roadSituation))
+    // TODO: enable lane change again! 
+    //if (StayOnCurrentLane(ego, roadSituation))
     {
         const sLaneInfo& laneInfo = roadSituation.GetLaneInfo(ego.GetLaneName());
 
@@ -69,9 +70,11 @@ bool AccelerateToMaxSpeed(
         || laneInfo.IsDistanceToLeadingVehicleLarger(thresholdKeepLane))
     {
         plannedBehavior.targetLane = laneInfo.GetLaneName();
-        plannedBehavior.targetSpeed = maxSpeed;
-        plannedBehavior.secondsToReachTarget = 0.0;
-        plannedBehavior.targetLeadingVehicleId = invalidVehicleId;
+        plannedBehavior.speedAtTargetPosition = maxSpeed;
+        plannedBehavior.timeToTargetPosition = 0.0;
+        plannedBehavior.leadingVehicleId = invalidVehicleId;
+
+        printf("AccelerateToMaxSpeed\n");
 
         return true;
     }
@@ -84,9 +87,12 @@ void AdaptSpeedToLeadingVehicle(
     sBehavior& plannedBehavior)
 {
     plannedBehavior.targetLane = laneInfo.GetLaneName();
-    plannedBehavior.targetSpeed = laneInfo.GetSpeedOfLeadingVehicle();
-    plannedBehavior.secondsToReachTarget = 0.0;
-    plannedBehavior.targetLeadingVehicleId = laneInfo.GetLeadingVehicleId();
+    plannedBehavior.speedAtTargetPosition = laneInfo.GetSpeedOfLeadingVehicle();
+    plannedBehavior.distanceToTargetPosition = laneInfo.GetDistanceToLeadingVehicle();
+    plannedBehavior.timeToTargetPosition = 0.0; // TODO: add meaningful value
+    plannedBehavior.leadingVehicleId = laneInfo.GetLeadingVehicleId();
+
+    printf("AdaptSpeedToLeadingVehicle: %f\n", plannedBehavior.speedAtTargetPosition);
 }
 
 //double CalculateReferenceSpeed(
@@ -289,9 +295,10 @@ std::string ToString(const sBehavior& behavior)
     stringstream sstream;
     sstream
         << "target lane:" << behavior.targetLane
-        << ", leading vehicle ID: " << behavior.targetLeadingVehicleId
-        << ", target speed: " << behavior.targetSpeed
-        << ", seconds to reach target: " << behavior.secondsToReachTarget
+        << ", leading vehicle ID: " << behavior.leadingVehicleId
+        << ", desired speed: " << behavior.speedAtTargetPosition
+        << ", distance to position" << behavior.distanceToTargetPosition
+        << ", time to reach target: " << behavior.timeToTargetPosition
         << "\n";
     return sstream.str();
 }

@@ -10,12 +10,10 @@ using namespace std;
 
 cTrajectoryPlanner::cTrajectoryPlanner()
 {
-
 }
 
 void cTrajectoryPlanner::Init()
 {
-
 }
 
 sPath GeneratePath(
@@ -28,6 +26,9 @@ sPath GeneratePath(
     
     sPath plannedPath;
     // TODO: implement real path planning for given situation
+
+
+
     return plannedPath;
 }
 
@@ -120,8 +121,8 @@ void CreateFiveReferencePoints(
     referencePoints.push_back(previousPoint);
     referencePoints.push_back(referencePoint);
 
-    const double waypointDist = previousPath.GetLength() > 30.0 ?
-        previousPath.GetLength() + 2 : 30.0;
+    const double waypointDist = previousPath.Length() > 30.0 ?
+        previousPath.Length() + 2 : 30.0;
     
     // in frenet frame add evenly 30m spaced points ahead of the starting reference
     const double frenetDCoord(2 + 4 * targetLane);
@@ -210,6 +211,7 @@ vector<s2DPtCart> TransformToWorldCoordinates(
 }
 
 const unsigned int numOfPathPoints(50);
+const double avgDeltaT = 0.02; // 20 milli seconds as seconds
 
 sPath GeneratePath(
     const sEgo& ego, 
@@ -231,14 +233,14 @@ sPath GeneratePath(
     // copy reference point to avoid overwriting during transformation
     const s2DPtCart referencePoint = referencePoints[1];
 
-    printf("ego position: %s\n", ToString(ego).c_str());
+    //printf("ego position: %s\n", ToString(ego).c_str());
     //PrintPath("previous path", previousPath);
-    PrintPathPoints("reference points", referencePoints);
+    //PrintPathPoints("reference points", referencePoints);
 
     vector<s2DPtCart> localCoords = TransformToLocalCoordinates(
         referencePoint, referenceYaw, referencePoints);
 
-    PrintPathPoints("reference points in local coordinates", localCoords);
+    //PrintPathPoints("reference points in local coordinates", localCoords);
 
     // create a spline
     tk::spline pathSpline;
@@ -258,8 +260,7 @@ sPath GeneratePath(
 
     double splineSamplePos = 0;
 
-    const double numOfSteps = (splineTargetDistance / (0.2 * referenceVelocity / 2.24)); // 2.24 mph -> m/s
-    const double stepSize = splineTargetX / numOfSteps;
+    const double stepSize = avgDeltaT * referenceVelocity;
 
     vector<s2DPtCart> additionalPathPoints;
 
@@ -284,9 +285,11 @@ sPath GeneratePath(
         newPath.coordsX.push_back(additionalPathPoints[i].x);
         newPath.coordsY.push_back(additionalPathPoints[i].y);
 
-        printf("adding point %i (%.3f,%.3f), numOfSteps=%.3f, stepSize=%.3f\n", 
-            i + prevPathSize, additionalPathPoints[i].x, additionalPathPoints[i].y, numOfSteps, stepSize);
+        //printf("adding point %i (%.3f,%.3f), numOfSteps=%.3f, stepSize=%.3f\n", 
+        //    i + prevPathSize, additionalPathPoints[i].x, additionalPathPoints[i].y, numOfSteps, stepSize);
     }
+
+    //printf("new path length: %.3f\n", newPath.Length());
 
     return newPath;
 }

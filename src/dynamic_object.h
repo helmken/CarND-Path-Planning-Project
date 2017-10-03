@@ -1,6 +1,10 @@
 #ifndef DYNAMIC_OBJECT_H
 #define DYNAMIC_OBJECT_H
 
+
+#include "conversion_helpers.h"
+
+
 struct sDynamicObject
 {
     int id;
@@ -22,7 +26,9 @@ struct sDynamicObject
         double vy,
         double s,
         double d)
-        : id(id), x(x), y(y), vx(vx), vy(vy), s(s), d(d)
+        : id(id), x(x), y(y), 
+        vx(mphToMs(vx)), vy(mphToMs(vy)),
+        s(s), d(d)
     {
     };
 

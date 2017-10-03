@@ -3,6 +3,9 @@
 
 #include <vector>
 
+// 50 MPH = 22.352 m/s
+//        = 80.467 km/h
+const double mphAsMs = 0.44704;
 
 double deg2rad(double x);
 
@@ -28,5 +31,11 @@ int FindNextWaypointIdx(
     const double theta,
     const std::vector<double>& maps_x, 
     const std::vector<double>& maps_y);
+
+// convert miles per hour to meters per second
+double mphToMs(double mph);
+
+// convert meters per second to miles per hour
+double msToMph(double ms);
 
 #endif // CONVERSION_HELPERS_H

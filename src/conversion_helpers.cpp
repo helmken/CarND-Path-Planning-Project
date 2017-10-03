@@ -110,3 +110,13 @@ int FindNextWaypointIdx(
 
     return closestWaypointIdx;
 }
+
+double mphToMs(double mph)
+{
+    return mph * mphAsMs;
+}
+
+double msToMph(double ms)
+{
+    return ms / mphAsMs;
+}

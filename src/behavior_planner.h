@@ -24,9 +24,9 @@ enum eEgoState
     ES_LANE_CHANGE_RIGHT // move to right lane
 };
 
-
-//const double maxSpeed(5.0); // meters per second
-const double maxSpeed(4.5); // meters per second
+// 50 MPH = 22.352 m/s
+//        = 80.467 km/h
+const double maxSpeed(22.3); // meters per second
 
 const double thresholdKeepLane(30.0);
 
@@ -42,38 +42,45 @@ struct sBehavior
     eLaneName targetLane;
 
     /*
-    ID of vehicle to follow: 
-    - if ID is valid, ego speed has to be adapted to target vehicle speed
-    - if ID is invalid, ego can accelerate to maximum speed
+    ID of vehicle to follow: if ID is valid, ego speed has to be adapted to
+    target vehicle speed, otherwise ego can accelerate to maximum speed
     */
-    int targetLeadingVehicleId;
+    int leadingVehicleId;
 
     /*
-    if target vehicle ID is invalid, adapt ego speed to target speed
+    desired speed at target position
     */
-    double targetSpeed;
+    double speedAtTargetPosition;
 
     /*
-    duration to reach desired behavior
+    distance to target position
     */
-    double secondsToReachTarget;
+    double distanceToTargetPosition;
+
+    /*
+    duration to reach desired position
+    */
+    double timeToTargetPosition;
 
     sBehavior()
         : targetLane(LN_UNDEFINED)
-        , targetLeadingVehicleId(-1)
-        , targetSpeed(-0.0)
-        , secondsToReachTarget(-1.0)
+        , leadingVehicleId(-1)
+        , speedAtTargetPosition(-1.0)
+        , distanceToTargetPosition(-1.0)
+        , timeToTargetPosition(-1.0)
     {};
 
     sBehavior(
-        eLaneName targetLane,
-        int targetLeadingVehicleId,
-        double targetSpeed,
-        double secondsToReachTarget)
-        : targetLane(targetLane)
-        , targetLeadingVehicleId(targetLeadingVehicleId)
-        , targetSpeed(targetSpeed)
-        , secondsToReachTarget(secondsToReachTarget)
+        eLaneName lane,
+        int id,
+        double speed,
+        double distance,
+        double time)
+        : targetLane(lane)
+        , leadingVehicleId(id)
+        , speedAtTargetPosition(speed)
+        , distanceToTargetPosition(distance)
+        , timeToTargetPosition(time)
     {};
 };
 

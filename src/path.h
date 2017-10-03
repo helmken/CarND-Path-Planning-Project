@@ -21,7 +21,7 @@ struct sPath
     {
     };
 
-    double GetLength() const
+    double Length() const
     {
         if (coordsX.empty())
         {
