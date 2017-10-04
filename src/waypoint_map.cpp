@@ -84,7 +84,7 @@ const double cWaypointMap::GetMaxS() const
     return m_waypoints[m_waypoints.size() - 1].s;
 }
 
-const int cWaypointMap::FindWaypointIdxForS(const double s) const
+int cWaypointMap::FindWaypointIdxForS(double s) const
 {
     if (s < 0)
     {
@@ -94,12 +94,11 @@ const int cWaypointMap::FindWaypointIdxForS(const double s) const
     int right = m_waypoints.size() - 1;
     if (s > m_waypoints[right].s)
     {
-        throw std::invalid_argument(
-            "could not find waypoint for given frenet s coordinate");
+        s -= m_waypoints[right].s;
     }
 
     int left = 0;
-    int pivot = (right - left) / 2;
+    int pivot = (right + left) / 2;
     while (left < (right - 1))
     {
         if (m_waypoints[pivot].s > s)
@@ -112,7 +111,7 @@ const int cWaypointMap::FindWaypointIdxForS(const double s) const
             // continue search in right half
             left = pivot;
         }
-        pivot = (right - left) / 2;
+        pivot = (right + left) / 2;
     }
 
     return right;

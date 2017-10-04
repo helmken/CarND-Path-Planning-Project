@@ -35,7 +35,7 @@ sBehavior cBehaviorPlanner::Execute(
 
     sBehavior plannedBehavior;
     // TODO: enable lane change again! 
-    //if (StayOnCurrentLane(ego, roadSituation))
+    if (StayOnCurrentLane(ego, roadSituation))
     {
         const sLaneInfo& laneInfo = roadSituation.GetLaneInfo(ego.GetLaneName());
 

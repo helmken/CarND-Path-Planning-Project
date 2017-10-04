@@ -69,9 +69,7 @@ sPath GeneratePath(
         sPoint2D wpEnd = getXY(
             ego.s + plannedPathLength,
             ego.d + deltaD,
-            waypointMap.GetMapPointsS(),
-            waypointMap.GetMapPointsX(),
-            waypointMap.GetMapPointsY());
+            waypointMap);
         referencePoints.push_back(wpEnd);
     }
     else
@@ -89,25 +87,19 @@ sPath GeneratePath(
         sPoint2D wpMiddle = getXY(
             ego.s + plannedPathLength / 2.0,
             ego.d + deltaD / 2.0,
-            waypointMap.GetMapPointsS(),
-            waypointMap.GetMapPointsX(),
-            waypointMap.GetMapPointsY());
+            waypointMap);
         referencePoints.push_back(wpMiddle);
 
         sPoint2D wpEnd = getXY(
             ego.s + plannedPathLength,
             ego.d + deltaD,
-            waypointMap.GetMapPointsS(),
-            waypointMap.GetMapPointsX(),
-            waypointMap.GetMapPointsY());
+            waypointMap);
         referencePoints.push_back(wpEnd);
 
         sPoint2D wpPastEnd = getXY(
             ego.s + plannedPathLength + desiredPathPortionLength,
             ego.d + deltaD,
-            waypointMap.GetMapPointsS(),
-            waypointMap.GetMapPointsX(),
-            waypointMap.GetMapPointsY());
+            waypointMap);
         referencePoints.push_back(wpPastEnd);
     }
 
@@ -236,25 +228,19 @@ void CreateFiveReferencePoints(
     sPoint2D nextWp30 = getXY(
         ego.s + 30, 
         frenetDCoord,
-        waypointMap.GetMapPointsS(),
-        waypointMap.GetMapPointsX(),
-        waypointMap.GetMapPointsY());
+        waypointMap);
     referencePoints.push_back(nextWp30);
 
     sPoint2D nextWp60 = getXY(
         ego.s + 60,
         frenetDCoord,
-        waypointMap.GetMapPointsS(),
-        waypointMap.GetMapPointsX(),
-        waypointMap.GetMapPointsY());
+        waypointMap);
     referencePoints.push_back(nextWp60);
 
     sPoint2D nextWp90 = getXY(
         ego.s + 90,
         frenetDCoord,
-        waypointMap.GetMapPointsS(),
-        waypointMap.GetMapPointsX(),
-        waypointMap.GetMapPointsY());
+        waypointMap);
     referencePoints.push_back(nextWp90);
 }
 
@@ -546,22 +532,33 @@ s2DCoordFrenet getFrenet(
 // TODO: according to slack getXY should not be used - instead splines should be used
 sPoint2D getXY(
     const double s, const double d,
-    const std::vector<double>& maps_s,
-    const std::vector<double>& maps_x,
-    const std::vector<double>& maps_y)
+    const cWaypointMap& waypointMap)
 {
-    int waypointIdx0 = -1;
+    const std::vector<double>& maps_s = waypointMap.GetMapPointsS();
+    const std::vector<double>& maps_x = waypointMap.GetMapPointsX();
+    const std::vector<double>& maps_y = waypointMap.GetMapPointsY();
 
-    // the maximum value of s in the standard track is 6914.1492576599103
-    // when reaching this point, the app crashes!
-    const double maxS = maps_s[maps_s.size() - 1];
+    //int waypointIdx0 = -1;
 
-    while (s > maps_s[waypointIdx0 + 1] && (waypointIdx0 < (int)(maps_s.size() - 1)))
-    {
-        waypointIdx0++;
-    }
+    //// the maximum value of s in the standard track is 6914.1492576599103
+    //// when reaching this point, the app crashes!
+    //const double maxS = maps_s[maps_s.size() - 1];
+    //
+    //if (s > maxS)
+    //{
+    //    s -= maxS;
+    //}
+    //
+    //while (s > maps_s[waypointIdx0 + 1] && (waypointIdx0 < (int)(maps_s.size() - 1)))
+    //{
+    //    waypointIdx0++;
+    //}
 
-    int waypointIdx1 = (waypointIdx0 + 1) % maps_x.size();
+    //int waypointIdx1 = (waypointIdx0 + 1) % maps_x.size();
+
+    int waypointIdx1 = waypointMap.FindWaypointIdxForS(s);
+    int waypointIdx0 = waypointIdx1 > 0 ? 
+        waypointIdx1 - 1 : maps_s.size() - 1;
 
     double heading = atan2(
         (maps_y[waypointIdx1] - maps_y[waypointIdx0]), 

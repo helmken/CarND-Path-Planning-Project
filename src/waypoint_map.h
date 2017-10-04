@@ -54,7 +54,7 @@ public:
     const double GetMaxS() const;
 
     // Find index of waypoint that has the smallest value larger than given s.
-    const int FindWaypointIdxForS(const double s) const;
+    int FindWaypointIdxForS(double s) const;
 
     // TODO: these have to be removed after refactoring GetXY:
     const std::vector<double>& GetMapPointsS() const;

@@ -34,9 +34,7 @@ s2DCoordFrenet getFrenet(
 // TODO: according to slack getXY should not be used - instead splines should be used
 sPoint2D getXY(
     const double s, const double d,
-    const std::vector<double>& maps_s,
-    const std::vector<double>& maps_x,
-    const std::vector<double>& maps_y);
+    const cWaypointMap& waypointMap);
 
 sPoint2D FrenetToCartesian(
     const sWaypoint& wp0, const sWaypoint& wp1,
