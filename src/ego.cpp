@@ -14,18 +14,16 @@ sEgo::sEgo()
     : x(0.0), y(0.0)
     , s(0.0), d(0.0)
     , yaw(0.0), speed(0.0)
-{
-}
+{}
 
 sEgo::sEgo(
       double x, double y
     , double s, double d
-    , double yaw, double speed)
+    , double yaw, double v)
     : x(x), y(y)
     , s(s), d(d)
-    , yaw(yaw), speed(mphToMs(speed))
-{
-}
+    , yaw(yaw), speed(mphToMs(v))
+{}
 
 eLaneName sEgo::GetLaneName() const
 {

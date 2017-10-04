@@ -59,4 +59,6 @@ public:
     void AddVehicle(const sDynamicObject& vehicle);
 };
 
+double LaneNameToD(eLaneName laneName);
+
 #endif // LANE_INFO_H

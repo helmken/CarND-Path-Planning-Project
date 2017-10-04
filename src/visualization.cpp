@@ -224,24 +224,24 @@ void cVisualization::BoundingBoxSinglePath(
     double& bottom, double& top,
     const sPath& path)
 {
-    for (size_t i(0); i < path.coordsX.size(); ++i)
+    for (size_t i(0); i < path.points.size(); ++i)
     {
-        if (path.coordsX[i] < left)
+        if (path.points[i].x < left)
         {
-            left = path.coordsX[i];
+            left = path.points[i].x;
         }
-        if (path.coordsX[i] > right)
+        if (path.points[i].x > right)
         {
-            right = path.coordsX[i];
+            right = path.points[i].x;
         }
 
-        if (path.coordsY[i] < bottom)
+        if (path.points[i].y < bottom)
         {
-            bottom = path.coordsY[i];
+            bottom = path.points[i].y;
         }
-        if (path.coordsY[i] > top)
+        if (path.points[i].y > top)
         {
-            top = path.coordsY[i];
+            top = path.points[i].y;
         }
     }
 }
@@ -301,9 +301,9 @@ void cVisualization::DrawPath(const sPath& path, const bool isNewPath)
     }
 
     glBegin(GL_POINTS);
-    for (size_t i(0); i < path.coordsX.size(); ++i)
+    for (size_t i(0); i < path.points.size(); ++i)
     {
-        glVertex3d(path.coordsX[i], path.coordsY[i], 0.0);
+        glVertex3d(path.points[i].x, path.points[i].y, 0.0);
     }
     glEnd();
 }

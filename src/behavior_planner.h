@@ -26,9 +26,10 @@ enum eEgoState
 
 // 50 MPH = 22.352 m/s
 //        = 80.467 km/h
-const double maxSpeed(22.3); // meters per second
+const double maxSpeed(22.3); // 50 MPH as meters per second
 
-const double thresholdKeepLane(30.0);
+// stay on current lane as long as distance to leading vehicle is larger
+const double thresholdKeepLane(30.0); 
 
 const int invalidVehicleId(-1);
 

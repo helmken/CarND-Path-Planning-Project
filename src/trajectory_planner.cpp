@@ -1,8 +1,8 @@
+#include <limits>
 #include <vector>
 
 #include "conversion_helpers.h"
 #include "trajectory_planner.h"
-#include "spline.h" // used to smooth out edgy path from waypoints
 
 
 using namespace std;
@@ -16,6 +16,14 @@ void cTrajectoryPlanner::Init()
 {
 }
 
+// using fixed time horizon to realize planned behavior
+const double timeHorizon(2.0);
+
+// reusing portion of previous path to avoid jerks
+const double timeToFollowPreviousPath(0.5);
+
+const double avgDeltaT = 0.02; // 20 milli seconds as seconds
+
 sPath GeneratePath(
     const sBehavior& plannedBehavior,
     const sEgo& ego,
@@ -24,36 +32,140 @@ sPath GeneratePath(
 {
     // TODO: use code from lesson 5.24
     
+    // reuse waypoints from previous path
+    const double desiredPathPortionLength = 10; // in meters TODO: ego.speed * timeToFollowPreviousPath;
+    
+    double reusedPathPointsLength(0);
+    vector<sPoint2D> reusedPathPoints = previousPath.PathPortion(
+        desiredPathPortionLength,
+        reusedPathPointsLength);
+
+    const double prevPathLength = previousPath.Length();
+
+    const double deltaD = LaneNameToD(plannedBehavior.targetLane) - ego.d;
+
+    const double plannedPathLength = 50; // in meters TODO: ego.speed * timeHorizon;
+
+    vector<sPoint2D> referencePoints;
+    double referenceYaw(0.0);
+    sPoint2D referencePoint(0.0, 0.0);
+    
+    printf("ego.speed=%.3f, reusedPathPointsLength=%.3f, #reused path points=%i, prevPathLength=%.3f, deltaD=%.3f, plannedPathLength=%.3f\n",
+        ego.speed, reusedPathPointsLength, reusedPathPoints.size(), prevPathLength, deltaD, plannedPathLength);
+
+    if (ego.speed < 0.1 || prevPathLength < desiredPathPortionLength)
+    {
+        // generate path points based on ego position
+        
+        referenceYaw = deg2rad(ego.yaw);
+        referencePoints.push_back(
+            sPoint2D(
+                ego.x - cos(referenceYaw),
+                ego.y - sin(referenceYaw)));
+
+        referencePoint = sPoint2D(ego.x, ego.y);
+        referencePoints.push_back(referencePoint);
+
+        sPoint2D wpEnd = getXY(
+            ego.s + plannedPathLength,
+            ego.d + deltaD,
+            waypointMap.GetMapPointsS(),
+            waypointMap.GetMapPointsX(),
+            waypointMap.GetMapPointsY());
+        referencePoints.push_back(wpEnd);
+    }
+    else
+    {
+        // reuse portion of previous path
+
+        const sPoint2D& pt0 = reusedPathPoints[reusedPathPoints.size() - 2];
+        const sPoint2D& pt1 = reusedPathPoints[reusedPathPoints.size() - 1];
+        referenceYaw = atan2(pt1.y - pt0.y, pt1.x - pt0.x);
+        referencePoint = pt1;
+
+        referencePoints.push_back(pt0);
+        referencePoints.push_back(pt1);
+
+        sPoint2D wpMiddle = getXY(
+            ego.s + plannedPathLength / 2.0,
+            ego.d + deltaD / 2.0,
+            waypointMap.GetMapPointsS(),
+            waypointMap.GetMapPointsX(),
+            waypointMap.GetMapPointsY());
+        referencePoints.push_back(wpMiddle);
+
+        sPoint2D wpEnd = getXY(
+            ego.s + plannedPathLength,
+            ego.d + deltaD,
+            waypointMap.GetMapPointsS(),
+            waypointMap.GetMapPointsX(),
+            waypointMap.GetMapPointsY());
+        referencePoints.push_back(wpEnd);
+
+        sPoint2D wpPastEnd = getXY(
+            ego.s + plannedPathLength + desiredPathPortionLength,
+            ego.d + deltaD,
+            waypointMap.GetMapPointsS(),
+            waypointMap.GetMapPointsX(),
+            waypointMap.GetMapPointsY());
+        referencePoints.push_back(wpPastEnd);
+    }
+
+    const double deltaVel = ego.speed - plannedBehavior.speedAtTargetPosition;
+    const double deltaAcc = deltaVel / timeHorizon;
+
+    PrintReferencePoints("reference points in world coordinates", referencePoints);
+
+    vector<sPoint2D> referencePointsLocalCoords = TransformToLocalCoordinates(
+        referencePoint, referenceYaw, referencePoints);
+
+    PrintReferencePoints("path points in local coordinates", referencePointsLocalCoords);
+
+
+
+    // create a spline
+    tk::spline pathSpline;
+
+    // set (x, y) points to the spline
+    SetSplinePoints(pathSpline, referencePointsLocalCoords);
+
+    
+    
+    const double splineTargetX = plannedPathLength;
+    const double splineTargetY = pathSpline(splineTargetX);
+    const double splineTargetDistance = sqrt(pow(splineTargetX, 2) + pow(splineTargetY, 2));
+    const double stepSize = avgDeltaT * plannedBehavior.speedAtTargetPosition;
+
+    double splineSamplePos = 0;
+
+    // sample spline 
+    vector<sPoint2D> generatedPathPointsLocal;
+    while (splineSamplePos < splineTargetDistance )
+    {
+        double ptX = splineSamplePos + stepSize;
+        double ptY = pathSpline(ptX);
+
+        splineSamplePos = ptX;
+
+        generatedPathPointsLocal.push_back(sPoint2D(ptX, ptY));
+    }
+
+    vector<sPoint2D> generatedPathPointsWorld = TransformToWorldCoordinates(
+        referencePoint, referenceYaw, generatedPathPointsLocal);
+
     sPath plannedPath;
-    // TODO: implement real path planning for given situation
+    for (size_t i(0); i < reusedPathPoints.size(); ++i)
+    {
+        plannedPath.points.push_back(reusedPathPoints[i]);
+    }
 
-
+    for (size_t i(0); i < generatedPathPointsWorld.size(); ++i)
+    {
+        plannedPath.points.push_back(generatedPathPointsWorld[i]);
+    }
 
     return plannedPath;
 }
-
-void PrintPathPoints(
-    const std::string& info,
-    const vector<s2DPtCart>& pathPoints)
-{
-    printf("%s\n", info.c_str());
-    for (size_t i(0); i < pathPoints.size(); ++i)
-    {
-        printf("%i: (%.3f,%.3f)\n", i, pathPoints[i].x, pathPoints[i].y);
-    }
-}
-
-void PrintPath(
-    const std::string& info,
-    const sPath& path)
-{
-    printf("%s\n", info.c_str());
-    for (size_t i(0); i < path.coordsX.size(); ++i)
-    {
-        printf("%i: (%.3f,%.3f)\n", i, path.coordsX[i], path.coordsY[i]);
-    }
-}
-
 
 // reference (x, y, yaw) state
 // either we will reference the starting point as where the car is or at
@@ -61,11 +173,11 @@ void PrintPath(
 void GetFirstTwoReferencePoints(
     const sEgo& ego,
     const sPath& previousPath,
-    s2DPtCart& referencePoint,
-    s2DPtCart& previousPoint,
+    sPoint2D& referencePoint,
+    sPoint2D& previousPoint,
     double& referenceYaw)
 {
-    const size_t prevPathSize = previousPath.coordsX.size();
+    const size_t prevPathSize = previousPath.points.size();
 
     // if previous size is almost empty, use the car as starting reference
     if (prevPathSize < 2)
@@ -77,8 +189,8 @@ void GetFirstTwoReferencePoints(
         referencePoint.y = ego.y;
         referenceYaw = deg2rad(ego.yaw);
 
-        previousPoint.x = ego.x - cos(ego.yaw);
-        previousPoint.y = ego.y - sin(ego.yaw);
+        previousPoint.x = ego.x - cos(referenceYaw);
+        previousPoint.y = ego.y - sin(referenceYaw);
     }
     else
     {
@@ -86,11 +198,9 @@ void GetFirstTwoReferencePoints(
 
         // redefine reference state as previous path end point
         // use two points that make the path tangent to the previous path's end point
-        referencePoint.x = previousPath.coordsX[prevPathSize - 1];
-        referencePoint.y = previousPath.coordsY[prevPathSize - 1];
+        referencePoint = previousPath.points[prevPathSize - 1];
 
-        previousPoint.x = previousPath.coordsX[prevPathSize - 2];
-        previousPoint.y = previousPath.coordsY[prevPathSize - 2];
+        previousPoint = previousPath.points[prevPathSize - 2];
         referenceYaw = atan2(
             referencePoint.y - previousPoint.y, 
             referencePoint.x - previousPoint.x);
@@ -106,14 +216,14 @@ void CreateFiveReferencePoints(
     const cWaypointMap& waypointMap,
     const sPath& previousPath,
     const int targetLane,
-    vector<s2DPtCart>& referencePoints,
+    vector<sPoint2D>& referencePoints,
     double& referenceYaw)
 {
     // reference (x, y, yaw) state
     // either we will reference the starting point as where the car is or at
     // the previous paths end point
-    s2DPtCart referencePoint(0.0, 0.0);
-    s2DPtCart previousPoint(0.0, 0.0);
+    sPoint2D referencePoint(0.0, 0.0);
+    sPoint2D previousPoint(0.0, 0.0);
     GetFirstTwoReferencePoints(
         ego, previousPath,
         referencePoint, previousPoint, referenceYaw);
@@ -121,20 +231,17 @@ void CreateFiveReferencePoints(
     referencePoints.push_back(previousPoint);
     referencePoints.push_back(referencePoint);
 
-    const double waypointDist = previousPath.Length() > 30.0 ?
-        previousPath.Length() + 2 : 30.0;
-    
     // in frenet frame add evenly 30m spaced points ahead of the starting reference
     const double frenetDCoord(2 + 4 * targetLane);
-    s2DPtCart nextWp30 = getXY(
-        ego.s + waypointDist, // + 30; 
+    sPoint2D nextWp30 = getXY(
+        ego.s + 30, 
         frenetDCoord,
         waypointMap.GetMapPointsS(),
         waypointMap.GetMapPointsX(),
         waypointMap.GetMapPointsY());
     referencePoints.push_back(nextWp30);
 
-    s2DPtCart nextWp60 = getXY(
+    sPoint2D nextWp60 = getXY(
         ego.s + 60,
         frenetDCoord,
         waypointMap.GetMapPointsS(),
@@ -142,7 +249,7 @@ void CreateFiveReferencePoints(
         waypointMap.GetMapPointsY());
     referencePoints.push_back(nextWp60);
 
-    s2DPtCart nextWp90 = getXY(
+    sPoint2D nextWp90 = getXY(
         ego.s + 90,
         frenetDCoord,
         waypointMap.GetMapPointsS(),
@@ -151,67 +258,8 @@ void CreateFiveReferencePoints(
     referencePoints.push_back(nextWp90);
 }
 
-void SetSplinePoints(tk::spline& pathSpline, const vector<s2DPtCart>& pathPoints)
-{
-    vector<double> ptsx(pathPoints.size());
-    vector<double> ptsy(pathPoints.size());
-
-    for (size_t i(0); i < pathPoints.size(); ++i)
-    {
-        ptsx[i] = pathPoints[i].x;
-        ptsy[i] = pathPoints[i].y;
-    }
-
-    pathSpline.set_points(ptsx, ptsy);
-}
-
-vector<s2DPtCart> TransformToLocalCoordinates(
-    const s2DPtCart& referencePoint,
-    const double referenceYaw,
-    const vector<s2DPtCart>& points)
-{
-    vector<s2DPtCart> transformed;
-
-    for (size_t i(0); i < points.size(); ++i)
-    {
-        // 1) shift to origin
-        const double shiftX = points[i].x - referencePoint.x;
-        const double shiftY = points[i].y - referencePoint.y;
-
-        // 2) rotate around yaw
-        const double rotX = (shiftX * cos(-referenceYaw) - shiftY * sin(-referenceYaw));
-        const double rotY = (shiftX * sin(-referenceYaw) + shiftY * cos(-referenceYaw));
-
-        transformed.push_back(s2DPtCart(rotX, rotY));
-    }
-
-    return transformed;
-}
-
-vector<s2DPtCart> TransformToWorldCoordinates(
-    const s2DPtCart& referencePoint,
-    const double referenceYaw,
-    const vector<s2DPtCart>& points)
-{
-    vector<s2DPtCart> transformed;
-
-    for (size_t i(0); i < points.size(); ++i)
-    {
-        // rotate back to initial orientation to revert earlier rotation
-        double x = (points[i].x * cos(referenceYaw) - points[i].y * sin(referenceYaw));
-        double y = (points[i].x * sin(referenceYaw) + points[i].y * cos(referenceYaw));
-
-        x += referencePoint.x;
-        y += referencePoint.y;
-
-        transformed.push_back(s2DPtCart(x, y));
-    }
-
-    return transformed;
-}
-
-const unsigned int numOfPathPoints(50);
-const double avgDeltaT = 0.02; // 20 milli seconds as seconds
+// 50 path points with 0.02 sec distance -> planned path for 1 sec
+const unsigned int numOfPathPoints(50); 
 
 sPath GeneratePath(
     const sEgo& ego, 
@@ -224,23 +272,114 @@ sPath GeneratePath(
     // later we will interpolate these waypoints with a spline and fill it in
     // with more points that control speed
 
-    vector<s2DPtCart> referencePoints;
+    vector<sPoint2D> referencePoints;
     double referenceYaw(0.0);
 
     CreateFiveReferencePoints(ego, waypointMap, previousPath, targetLane,
         referencePoints, referenceYaw);
     
     // copy reference point to avoid overwriting during transformation
-    const s2DPtCart referencePoint = referencePoints[1];
+    // reference point is the last point of previous path
+    const sPoint2D referencePoint = referencePoints[1];
+
+    printf("ego position: %s, previous path length=%.3f\n", 
+        ToString(ego).c_str(), previousPath.Length());
+    
+    if (!previousPath.points.empty())
+    {
+        printf("first point of previous path: (%.3f,%.3f)\n",
+            previousPath.points[0].x, previousPath.points[0].y);
+    }
+    
+    //PrintPath("previous path", previousPath);
+    PrintReferencePoints("reference points in world coordinates", referencePoints);
+
+    vector<sPoint2D> referencePointsLocalCoords = TransformToLocalCoordinates(
+        referencePoint, referenceYaw, referencePoints);
+
+    PrintReferencePoints("reference points in local coordinates", referencePointsLocalCoords);
+
+    // create a spline
+    tk::spline pathSpline;
+
+    // set (x, y) points to the spline
+    SetSplinePoints(pathSpline, referencePointsLocalCoords);
+
+    // define the actual (x, y) points we will use for the planner
+    // start with all of the previous path points from last time
+    sPath newPath = previousPath;
+
+    // calculate how to break up spline points so that we travel
+    // at our desired reference velocity
+    // spline is in local coordinates
+    double splineTargetX = 30.0;
+    double splineTargetY = pathSpline(splineTargetX);
+    double splineTargetDistance = sqrt(pow(splineTargetX, 2) + pow(splineTargetY, 2));
+
+    double splineSamplePos = 0;
+
+    const double stepSize = avgDeltaT * referenceVelocity;
+
+    vector<sPoint2D> additionalPathPoints;
+
+    // fill up the rest of our path planner after filling it with previous points,
+    // here we will always output 50 points
+    const unsigned int prevPathSize = previousPath.points.size();
+    for (size_t i(1); i <= numOfPathPoints - prevPathSize; ++i)
+    {
+        double ptX = splineSamplePos + stepSize;
+        double ptY = pathSpline(ptX);
+
+        splineSamplePos = ptX;
+
+        additionalPathPoints.push_back(sPoint2D(ptX, ptY));
+    }
+
+    additionalPathPoints = TransformToWorldCoordinates(
+        referencePoint, referenceYaw, additionalPathPoints);
+
+    for (size_t i(0); i < additionalPathPoints.size(); ++i)
+    {
+        newPath.points.push_back(additionalPathPoints[i]);
+
+        //printf("adding point %i (%.3f,%.3f), numOfSteps=%.3f, stepSize=%.3f\n", 
+        //    i + prevPathSize, additionalPathPoints[i].x, additionalPathPoints[i].y, numOfSteps, stepSize);
+    }
+
+    printf("new path length: %.3f, added %i points\n", 
+        newPath.Length(), additionalPathPoints.size());
+
+    return newPath;
+}
+
+sPath GeneratePath_orig(
+    const sEgo& ego,
+    const cWaypointMap& waypointMap,
+    const sPath& previousPath,
+    const int targetLane,
+    const double referenceVelocity)
+{
+    // create a list of widely spread (x, y) waypoints, evenly spaced at 30 m
+    // later we will interpolate these waypoints with a spline and fill it in
+    // with more points that control speed
+
+    vector<sPoint2D> referencePoints;
+    double referenceYaw(0.0);
+
+    CreateFiveReferencePoints(ego, waypointMap, previousPath, targetLane,
+        referencePoints, referenceYaw);
+
+    // copy reference point to avoid overwriting during transformation
+    const sPoint2D referencePoint = referencePoints[1];
 
     //printf("ego position: %s\n", ToString(ego).c_str());
     //PrintPath("previous path", previousPath);
-    //PrintPathPoints("reference points", referencePoints);
+    //PrintReferencePoints("reference points", referencePoints);
 
-    vector<s2DPtCart> localCoords = TransformToLocalCoordinates(
+    vector<sPoint2D> localCoords = TransformToLocalCoordinates(
         referencePoint, referenceYaw, referencePoints);
 
-    //PrintPathPoints("reference points in local coordinates", localCoords);
+    //PrintReferencePoints("reference points in local coordinates", referencePointsLocalCoords);
 
     // create a spline
     tk::spline pathSpline;
@@ -262,11 +401,11 @@ sPath GeneratePath(
 
     const double stepSize = avgDeltaT * referenceVelocity;
 
-    vector<s2DPtCart> additionalPathPoints;
+    vector<sPoint2D> additionalPathPoints;
 
     // fill up the rest of our path planner after filling it with previous points,
     // here we will always output 50 points
-    const unsigned int prevPathSize = previousPath.coordsX.size();
+    const unsigned int prevPathSize = previousPath.points.size();
     for (size_t i(1); i <= numOfPathPoints - prevPathSize; ++i)
     {
         double ptX = splineSamplePos + stepSize;
@@ -274,7 +413,7 @@ sPath GeneratePath(
 
         splineSamplePos = ptX;
 
-        additionalPathPoints.push_back(s2DPtCart(ptX, ptY));
+        additionalPathPoints.push_back(sPoint2D(ptX, ptY));
     }
 
     additionalPathPoints = TransformToWorldCoordinates(
@@ -282,8 +421,7 @@ sPath GeneratePath(
 
     for (size_t i(0); i < additionalPathPoints.size(); ++i)
     {
-        newPath.coordsX.push_back(additionalPathPoints[i].x);
-        newPath.coordsY.push_back(additionalPathPoints[i].y);
+        newPath.points.push_back(additionalPathPoints[i]);
 
         //printf("adding point %i (%.3f,%.3f), numOfSteps=%.3f, stepSize=%.3f\n", 
         //    i + prevPathSize, additionalPathPoints[i].x, additionalPathPoints[i].y, numOfSteps, stepSize);
@@ -292,6 +430,65 @@ sPath GeneratePath(
     //printf("new path length: %.3f\n", newPath.Length());
 
     return newPath;
+}
+
+void SetSplinePoints(tk::spline& pathSpline, const vector<sPoint2D>& pathPoints)
+{
+    vector<double> ptsx(pathPoints.size());
+    vector<double> ptsy(pathPoints.size());
+
+    for (size_t i(0); i < pathPoints.size(); ++i)
+    {
+        ptsx[i] = pathPoints[i].x;
+        ptsy[i] = pathPoints[i].y;
+    }
+
+    pathSpline.set_points(ptsx, ptsy);
+}
+
+vector<sPoint2D> TransformToLocalCoordinates(
+    const sPoint2D& referencePoint,
+    const double referenceYaw,
+    const vector<sPoint2D>& points)
+{
+    vector<sPoint2D> transformed;
+
+    for (size_t i(0); i < points.size(); ++i)
+    {
+        // 1) shift to origin
+        const double shiftX = points[i].x - referencePoint.x;
+        const double shiftY = points[i].y - referencePoint.y;
+
+        // 2) rotate around yaw
+        const double rotX = (shiftX * cos(-referenceYaw) - shiftY * sin(-referenceYaw));
+        const double rotY = (shiftX * sin(-referenceYaw) + shiftY * cos(-referenceYaw));
+
+        transformed.push_back(sPoint2D(rotX, rotY));
+    }
+
+    return transformed;
+}
+
+vector<sPoint2D> TransformToWorldCoordinates(
+    const sPoint2D& referencePoint,
+    const double referenceYaw,
+    const vector<sPoint2D>& points)
+{
+    vector<sPoint2D> transformed;
+
+    for (size_t i(0); i < points.size(); ++i)
+    {
+        // rotate back to initial orientation to revert earlier rotation
+        double x = (points[i].x * cos(referenceYaw) - points[i].y * sin(referenceYaw));
+        double y = (points[i].x * sin(referenceYaw) + points[i].y * cos(referenceYaw));
+
+        x += referencePoint.x;
+        y += referencePoint.y;
+
+        transformed.push_back(sPoint2D(x, y));
+    }
+
+    return transformed;
 }
 
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
@@ -347,7 +544,7 @@ s2DCoordFrenet getFrenet(
 
 // Transform from Frenet s,d coordinate to Cartesian x,y coordinate
 // TODO: according to slack getXY should not be used - instead splines should be used
-s2DPtCart getXY(
+sPoint2D getXY(
     const double s, const double d,
     const std::vector<double>& maps_s,
     const std::vector<double>& maps_x,
@@ -381,10 +578,10 @@ s2DPtCart getXY(
     const double x = deltaX + d * cos(headingPerp);
     const double y = deltaY + d * sin(headingPerp);
 
-    return s2DPtCart(x, y);
+    return sPoint2D(x, y);
 }
 
-s2DPtCart FrenetToCartesian(
+sPoint2D FrenetToCartesian(
     const sWaypoint& wp0, const sWaypoint& wp1,
     const double s, const double d)
 {
@@ -403,5 +600,38 @@ s2DPtCart FrenetToCartesian(
     const double x = deltaX + d * cos(headingPerp);
     const double y = deltaY + d * sin(headingPerp);
 
-    return s2DPtCart(x, y);
+    return sPoint2D(x, y);
+}
+
+void PrintReferencePoints(
+    const std::string& info,
+    const vector<sPoint2D>& pathPoints)
+{
+    printf("%s\n", info.c_str());
+    for (size_t i(0); i < pathPoints.size(); ++i)
+    {
+        if (0 == i)
+        {
+            printf("%i: (%.3f,%.3f)\n", i, pathPoints[i].x, pathPoints[i].y);
+        }
+        else
+        {
+            const double dist = distance(
+                pathPoints[i].x, pathPoints[i].y,
+                pathPoints[i - 1].x, pathPoints[i - 1].y);
+            printf("%i: (%.3f,%.3f), dist=%.3f\n", i, 
+                pathPoints[i].x, pathPoints[i].y, dist);
+        }
+    }
+}
+
+void PrintPath(
+    const std::string& info,
+    const sPath& path)
+{
+    printf("%s\n", info.c_str());
+    for (size_t i(0); i < path.points.size(); ++i)
+    {
+        printf("%i: (%.3f,%.3f)\n", i, path.points[i].x, path.points[i].y);
+    }
 }

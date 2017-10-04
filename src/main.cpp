@@ -94,12 +94,13 @@ int main()
                             previousPath);
 
                         json msgJson;
-                        msgJson["next_x"] = newPath.coordsX;
-                        msgJson["next_y"] = newPath.coordsY;
+                        msgJson["next_x"] = newPath.CoordsX();
+                        msgJson["next_y"] = newPath.CoordsY();
 
                         auto msg = "42[\"control\"," + msgJson.dump() + "]";
 
                         //this_thread::sleep_for(chrono::milliseconds(1000));
+                        //this_thread::sleep_for(chrono::milliseconds(100));
                         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
                         visualization.Update(

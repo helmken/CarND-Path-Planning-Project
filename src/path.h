@@ -1,36 +1,39 @@
 #ifndef PATH_H
 #define PATH_H
 
+#include <vector>
+
+#include "point.h"
+
+
 struct sPath
 {
-    std::vector<double> coordsX; // cartesian x coordinates
-    std::vector<double> coordsY; // cartesian y coordinates
-    double endS; // frenet s end coordinate
-    double endD; // frenet d end coordinate
+    std::vector<sPoint2D> points;
+    double endS; // frenet s end coordinate // TODO: unused?!?
+    double endD; // frenet d end coordinate // TODO: unused?!?
 
-    sPath()
-    {};
+    sPath();
+
+    sPath(
+        const std::vector<sPoint2D>& points,
+        const double endS,
+        const double endD);
 
     sPath(
         const std::vector<double>& coordsX,
         const std::vector<double>& coordsY,
         const double endS,
-        const double endD)
-        : coordsX(coordsX), coordsY(coordsY)
-        , endS(endS), endD(endD)
-    {
-    };
+        const double endD);
 
-    double Length() const
-    {
-        if (coordsX.empty())
-        {
-            return 0;
-        }
+    double Length() const;
 
-        return sqrt(  pow(coordsX[coordsX.size() - 1] - coordsX[0], 2)
-                    + pow(coordsY[coordsY.size() - 1] - coordsY[0], 2));
-    }
+    // return path points up to given max length 
+    std::vector<sPoint2D> PathPortion(
+        const double maxLength,
+        double& portionLength) const;
+
+    std::vector<double> CoordsX() const;
+    std::vector<double> CoordsY() const;
 };
 
 #endif // PATH_H

@@ -1,32 +1,11 @@
 #ifndef TRAJECTORY_PLANNER_H
 #define TRAJECTORY_PLANNER_H
 
-
 #include "behavior_planner.h"
 #include "ego.h"
 #include "path.h"
+#include "spline.h" // used to smooth out edgy path from waypoints
 #include "waypoint_map.h"
-
-
-struct s2DPtCart
-{
-    double x;
-    double y;
-
-    s2DPtCart(double x, double y)
-        : x(x), y(y)
-    {};
-};
-
-struct s2DCoordFrenet
-{
-    double s;
-    double d;
-
-    s2DCoordFrenet(double s, double d)
-        : s(s), d(d)
-    {};
-};
 
 
 /**
@@ -53,13 +32,13 @@ s2DCoordFrenet getFrenet(
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
 // TODO: according to slack getXY should not be used - instead splines should be used
-s2DPtCart getXY(
+sPoint2D getXY(
     const double s, const double d,
     const std::vector<double>& maps_s,
     const std::vector<double>& maps_x,
     const std::vector<double>& maps_y);
 
-s2DPtCart FrenetToCartesian(
+sPoint2D FrenetToCartesian(
     const sWaypoint& wp0, const sWaypoint& wp1,
     const double s, const double d);
 
@@ -79,14 +58,20 @@ sPath GeneratePath(
     const cWaypointMap& waypointMap,
     const sPath& previousPath);
 
-std::vector<s2DPtCart> TransformToLocalCoordinates(
-    const s2DPtCart& referencePoint,
+std::vector<sPoint2D> TransformToLocalCoordinates(
+    const sPoint2D& referencePoint,
     const double referenceYaw,
-    const std::vector<s2DPtCart>& points);
+    const std::vector<sPoint2D>& points);
 
-std::vector<s2DPtCart> TransformToWorldCoordinates(
-    const s2DPtCart& referencePoint,
+std::vector<sPoint2D> TransformToWorldCoordinates(
+    const sPoint2D& referencePoint,
     const double referenceYaw,
-    const std::vector<s2DPtCart>& points);
+    const std::vector<sPoint2D>& points);
+
+void SetSplinePoints(tk::spline& pathSpline, const std::vector<sPoint2D>& pathPoints);
+
+void PrintReferencePoints(
+    const std::string& info,
+    const std::vector<sPoint2D>& pathPoints);
 
 #endif // TRAJECTORY_PLANNER_H

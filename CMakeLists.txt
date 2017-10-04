@@ -20,9 +20,11 @@ set(sources
     src/lane_info.cpp
     src/lane_info.h
     src/main.cpp
+    src/path.cpp
     src/path.h
     src/path_planner.cpp
     src/path_planner.h
+    src/point.h
     src/road_situation.cpp
     src/road_situation.h
     src/simulator_message_reader.h

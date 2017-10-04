@@ -123,3 +123,21 @@ int sLaneInfo::GetLeadingVehicleId() const
 
     throw std::logic_error("not leading vehicle - not possible to determine ID");
 }
+
+double LaneNameToD(eLaneName laneName)
+{
+    if (LN_LANE_LEFT == laneName)
+    {
+        return laneWidth / 2.0;
+    }
+    else if (LN_LANE_MIDDLE == laneName)
+    {
+        return laneWidth + laneWidth / 2.0;
+    }
+    else
+    {
+        // LN_LANE_RIGHT
+        return 2.0 * laneWidth + laneWidth / 2.0;
+    }
+}
+
