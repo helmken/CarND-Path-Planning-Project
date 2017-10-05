@@ -55,9 +55,11 @@ sPath GeneratePath(
 void SamplePathSpline(
     tk::spline& pathSpline,
     const double plannedPathLength,
-    const double egoSpeed,
-    const double targetSpeed,
+    const double speed0,
+    const double speedTarget,
     std::vector<sPoint2D>& generatedPathPointsLocal);
+
+double SpeedAtEndOfPath(const std::vector<sPoint2D>& path);
 
 std::vector<sPoint2D> TransformToLocalCoordinates(
     const sPoint2D& referencePoint,

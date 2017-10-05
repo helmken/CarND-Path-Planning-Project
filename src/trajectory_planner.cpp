@@ -112,8 +112,12 @@ sPath GeneratePath(
 
     // sample spline 
     vector<sPoint2D> generatedPathPointsLocal;
+    
+    const double speed = reusedPathPoints.size() > 2 ?
+        SpeedAtEndOfPath(reusedPathPoints) : ego.speed;
+    
     SamplePathSpline(pathSpline, plannedPathLength, 
-        ego.speed, plannedBehavior.speedAtTargetPosition, 
+        speed, plannedBehavior.speedAtTargetPosition, 
         generatedPathPointsLocal);
 
     vector<sPoint2D> generatedPathPointsWorld = TransformToWorldCoordinates(
@@ -133,33 +137,60 @@ sPath GeneratePath(
     return plannedPath;
 }
 
+double SpeedAtEndOfPath(const std::vector<sPoint2D>& path)
+{
+    if (path.size() < 2)
+    {
+        return 0;
+    }
+
+    // assuming time between last points is avgDeltaT
+    const sPoint2D& pt0 = path[path.size() - 2];
+    const sPoint2D& pt1 = path[path.size() - 1];
+    
+    const double dist = distance(pt0.x, pt0.y, pt1.x, pt1.y);
+    return dist / avgDeltaT;
+}
+
 void SamplePathSpline(
     tk::spline& pathSpline,
     const double plannedPathLength,
-    const double egoSpeed, 
-    const double targetSpeed,
+    const double speed0,
+    const double speedTarget,
     vector<sPoint2D>& generatedPathPointsLocal)
 {
+    // spline starts at penultimate point of reused previous path
+
     const double splineTargetX = plannedPathLength;
     const double splineTargetY = pathSpline(splineTargetX);
     const double splineTargetDistance = sqrt(pow(splineTargetX, 2) + pow(splineTargetY, 2));
 
-    const double deltaVel = egoSpeed - targetSpeed;
-    const double deltaAcc = deltaVel / (timeHorizon - timeToFollowPreviousPath);
+    //const double deltaT = timeHorizon - timeToFollowPreviousPath;
+    const double deltaT = timeHorizon;
+    const double deltaSpeed = speedTarget - speed0;
+    const double acc = deltaSpeed / deltaT;
 
-    const double stepSize = avgDeltaT * targetSpeed;
-
-    double splineSamplePos = 0;
-
-    while (splineSamplePos < splineTargetDistance)
+    double t(0.0);
+    double speed = speed0;
+    double x = 0.0;
+    while (t < deltaT)
     {
-        double ptX = splineSamplePos + stepSize;
-        double ptY = pathSpline(ptX);
-
-        splineSamplePos = ptX;
-
-        generatedPathPointsLocal.push_back(sPoint2D(ptX, ptY));
+        t += avgDeltaT;
+        speed += acc * avgDeltaT;
+        x += speed * avgDeltaT;
+        double y = pathSpline(x);
+        generatedPathPointsLocal.push_back(sPoint2D(x, y));
     }
+
+    //const double stepSize = avgDeltaT * targetSpeed;
+    //double splineSamplePos = 0;
+    //while (splineSamplePos < splineTargetDistance)
+    //{
+    //    double ptX = splineSamplePos + stepSize;
+    //    double ptY = pathSpline(ptX);
+    //    generatedPathPointsLocal.push_back(sPoint2D(ptX, ptY));
+    //    splineSamplePos = ptX;
+    //}
 }
 
 void SetSplinePoints(tk::spline& pathSpline, const vector<sPoint2D>& pathPoints)
