@@ -17,6 +17,7 @@ void cTrajectoryPlanner::Init()
 }
 
 // using fixed time horizon to realize planned behavior
+// according to rubric, a lane change should not take longer than 3 s
 const double timeHorizon(2.0);
 
 // reusing portion of previous path to avoid jerks
@@ -33,8 +34,8 @@ sPath GeneratePath(
     // TODO: use code from lesson 5.24
     
     // reuse waypoints from previous path
-    const double desiredPathPortionLength = 10; // in meters TODO: ego.speed * timeToFollowPreviousPath;
-    
+    const double desiredPathPortionLength = ego.speed * timeToFollowPreviousPath;
+
     double reusedPathPointsLength(0);
     vector<sPoint2D> reusedPathPoints = previousPath.PathPortion(
         desiredPathPortionLength,
@@ -50,10 +51,7 @@ sPath GeneratePath(
     double referenceYaw(0.0);
     sPoint2D referencePoint(0.0, 0.0);
     
-    printf("ego.speed=%.3f, reusedPathPointsLength=%.3f, #reused path points=%i, prevPathLength=%.3f, deltaD=%.3f, plannedPathLength=%.3f\n",
-        ego.speed, reusedPathPointsLength, reusedPathPoints.size(), prevPathLength, deltaD, plannedPathLength);
-
-    if (ego.speed < 0.1 || prevPathLength < desiredPathPortionLength)
+    if (ego.speed < 0.1)
     {
         // generate path points based on ego position
         
