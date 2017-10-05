@@ -52,6 +52,13 @@ sPath GeneratePath(
     const cWaypointMap& waypointMap,
     const sPath& previousPath);
 
+void SamplePathSpline(
+    tk::spline& pathSpline,
+    const double plannedPathLength,
+    const double egoSpeed,
+    const double targetSpeed,
+    std::vector<sPoint2D>& generatedPathPointsLocal);
+
 std::vector<sPoint2D> TransformToLocalCoordinates(
     const sPoint2D& referencePoint,
     const double referenceYaw,

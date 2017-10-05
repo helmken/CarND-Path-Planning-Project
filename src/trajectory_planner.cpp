@@ -35,13 +35,10 @@ sPath GeneratePath(
     
     // reuse waypoints from previous path
     const double desiredPathPortionLength = ego.speed * timeToFollowPreviousPath;
-
     double reusedPathPointsLength(0);
     vector<sPoint2D> reusedPathPoints = previousPath.PathPortion(
         desiredPathPortionLength,
         reusedPathPointsLength);
-
-    const double prevPathLength = previousPath.Length();
 
     const double deltaD = LaneNameToD(plannedBehavior.targetLane) - ego.d;
 
@@ -101,44 +98,23 @@ sPath GeneratePath(
         referencePoints.push_back(wpPastEnd);
     }
 
-    const double deltaVel = ego.speed - plannedBehavior.speedAtTargetPosition;
-    const double deltaAcc = deltaVel / timeHorizon;
-
     PrintReferencePoints("reference points in world coordinates", referencePoints);
 
     vector<sPoint2D> referencePointsLocalCoords = TransformToLocalCoordinates(
         referencePoint, referenceYaw, referencePoints);
-
     PrintReferencePoints("path points in local coordinates", referencePointsLocalCoords);
 
 
 
     // create a spline
     tk::spline pathSpline;
-
-    // set (x, y) points to the spline
     SetSplinePoints(pathSpline, referencePointsLocalCoords);
-
-    
-    
-    const double splineTargetX = plannedPathLength;
-    const double splineTargetY = pathSpline(splineTargetX);
-    const double splineTargetDistance = sqrt(pow(splineTargetX, 2) + pow(splineTargetY, 2));
-    const double stepSize = avgDeltaT * plannedBehavior.speedAtTargetPosition;
-
-    double splineSamplePos = 0;
 
     // sample spline 
     vector<sPoint2D> generatedPathPointsLocal;
-    while (splineSamplePos < splineTargetDistance )
-    {
-        double ptX = splineSamplePos + stepSize;
-        double ptY = pathSpline(ptX);
-
-        splineSamplePos = ptX;
-
-        generatedPathPointsLocal.push_back(sPoint2D(ptX, ptY));
-    }
+    SamplePathSpline(pathSpline, plannedPathLength, 
+        ego.speed, plannedBehavior.speedAtTargetPosition, 
+        generatedPathPointsLocal);
 
     vector<sPoint2D> generatedPathPointsWorld = TransformToWorldCoordinates(
         referencePoint, referenceYaw, generatedPathPointsLocal);
@@ -155,6 +131,35 @@ sPath GeneratePath(
     }
 
     return plannedPath;
+}
+
+void SamplePathSpline(
+    tk::spline& pathSpline,
+    const double plannedPathLength,
+    const double egoSpeed, 
+    const double targetSpeed,
+    vector<sPoint2D>& generatedPathPointsLocal)
+{
+    const double splineTargetX = plannedPathLength;
+    const double splineTargetY = pathSpline(splineTargetX);
+    const double splineTargetDistance = sqrt(pow(splineTargetX, 2) + pow(splineTargetY, 2));
+
+    const double deltaVel = egoSpeed - targetSpeed;
+    const double deltaAcc = deltaVel / (timeHorizon - timeToFollowPreviousPath);
+
+    const double stepSize = avgDeltaT * targetSpeed;
+
+    double splineSamplePos = 0;
+
+    while (splineSamplePos < splineTargetDistance)
+    {
+        double ptX = splineSamplePos + stepSize;
+        double ptY = pathSpline(ptX);
+
+        splineSamplePos = ptX;
+
+        generatedPathPointsLocal.push_back(sPoint2D(ptX, ptY));
+    }
 }
 
 void SetSplinePoints(tk::spline& pathSpline, const vector<sPoint2D>& pathPoints)
