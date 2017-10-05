@@ -8,6 +8,9 @@
 #include "waypoint_map.h"
 
 
+// requirement from rubric: lane change should not take longer than 3 s
+// requirement from rubric: max 10 m/s^2 total acceleration, max 10 m/s^3 jerk 
+
 /**
  * Generate trajectory considering
  * - target speed 
@@ -39,13 +42,6 @@ sPoint2D getXY(
 sPoint2D FrenetToCartesian(
     const sWaypoint& wp0, const sWaypoint& wp1,
     const double s, const double d);
-
-sPath GeneratePath(
-    const sEgo& ego, 
-    const cWaypointMap& waypointMap,
-    const sPath& previousPath, 
-    const int lane,
-    const double referenceVelocity);
 
 /*
 Generate path for given behavior
