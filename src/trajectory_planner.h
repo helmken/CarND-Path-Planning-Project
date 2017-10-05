@@ -57,6 +57,7 @@ void SamplePathSpline(
     const double plannedPathLength,
     const double speed0,
     const double speedTarget,
+    const double deltaT,
     std::vector<sPoint2D>& generatedPathPointsLocal);
 
 double SpeedAtEndOfPath(const std::vector<sPoint2D>& path);

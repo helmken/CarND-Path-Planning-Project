@@ -98,11 +98,11 @@ sPath GeneratePath(
         referencePoints.push_back(wpPastEnd);
     }
 
-    PrintReferencePoints("reference points in world coordinates", referencePoints);
+    //PrintReferencePoints("reference points in world coordinates", referencePoints);
 
     vector<sPoint2D> referencePointsLocalCoords = TransformToLocalCoordinates(
         referencePoint, referenceYaw, referencePoints);
-    PrintReferencePoints("path points in local coordinates", referencePointsLocalCoords);
+    //PrintReferencePoints("path points in local coordinates", referencePointsLocalCoords);
 
 
 
@@ -115,9 +115,14 @@ sPath GeneratePath(
     
     const double speed = reusedPathPoints.size() > 2 ?
         SpeedAtEndOfPath(reusedPathPoints) : ego.speed;
-    
-    SamplePathSpline(pathSpline, plannedPathLength, 
-        speed, plannedBehavior.speedAtTargetPosition, 
+    const double deltaT = timeHorizon - timeToFollowPreviousPath;
+
+    SamplePathSpline(
+        pathSpline, 
+        plannedPathLength, 
+        speed, 
+        plannedBehavior.speedAtTargetPosition,
+        deltaT,
         generatedPathPointsLocal);
 
     vector<sPoint2D> generatedPathPointsWorld = TransformToWorldCoordinates(
@@ -157,6 +162,7 @@ void SamplePathSpline(
     const double plannedPathLength,
     const double speed0,
     const double speedTarget,
+    const double deltaT,
     vector<sPoint2D>& generatedPathPointsLocal)
 {
     // spline starts at penultimate point of reused previous path
@@ -165,8 +171,6 @@ void SamplePathSpline(
     const double splineTargetY = pathSpline(splineTargetX);
     const double splineTargetDistance = sqrt(pow(splineTargetX, 2) + pow(splineTargetY, 2));
 
-    //const double deltaT = timeHorizon - timeToFollowPreviousPath;
-    const double deltaT = timeHorizon;
     const double deltaSpeed = speedTarget - speed0;
     const double acc = deltaSpeed / deltaT;
 

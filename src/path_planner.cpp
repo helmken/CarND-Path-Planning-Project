@@ -41,8 +41,8 @@ sPath cPathPlanner::Execute(
     {
         speed = deltaS / deltaT;
     }
-    printf("deltaT=%.3f, deltaS=%.3f, speed=%.3f (m/s), speed=%.3f (MPH)\n", 
-        deltaT, deltaS, speed, msToMph(speed));
+    //printf("deltaT=%.3f, deltaS=%.3f, speed=%.3f (m/s), speed=%.3f (MPH)\n", 
+    //    deltaT, deltaS, speed, msToMph(speed));
     
     lastTime = currentTime;
     lastEgo = ego;

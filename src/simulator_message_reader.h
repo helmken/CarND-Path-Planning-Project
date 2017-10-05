@@ -10,8 +10,8 @@ sEgo JsonReadEgo(const nlohmann::json& telemetry)
 {
     const double speed = telemetry["speed"];
     
-    printf("JsonReadEgo: speed=%.3f (m/s), speed=%.3f (MPH)\n",
-        mphToMs(speed), speed);
+    //printf("JsonReadEgo: speed=%.3f (m/s), speed=%.3f (MPH)\n",
+    //    mphToMs(speed), speed);
 
     sEgo ego(
         telemetry["x"], 
