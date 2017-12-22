@@ -1,28 +1,44 @@
-#include "waypoint_map.h"
-
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <sstream>
 
+#include "constants.h"
+#include "conversion_helpers.h"
+#include "waypoint_map.h"
 
-using namespace std;
+
+cWaypointMap::cWaypointMap()
+    : 
+    m_maxS(0.0),
+    m_distLastFirstWp(0.0),
+    m_trackLengthS(0.0),
+    m_minX(doubleMax),
+    m_maxX(doubleMin),
+    m_minY(doubleMax),
+    m_maxY(doubleMin)
+{}
 
 void cWaypointMap::ReadMapFile()
 {
     // Waypoint map to read from
-    std::string mapFilename = "../data/highway_map.csv";
+    auto mapFilename = "../data/highway_map.csv";
 
-    // The max s value before wrapping around the track back to 0
-    // double max_s = 6945.554; // TODO: unused?
+    std::ifstream inFileStream(mapFilename, std::ifstream::in);
 
-    std::ifstream inFileStream(mapFilename.c_str(), std::ifstream::in);
+    m_minX = doubleMax;
+    m_maxX = doubleMin;
 
-    m_minX = std::numeric_limits<double>::max();
-    m_maxX = std::numeric_limits<double>::min();
+    m_minY = doubleMax;
+    m_maxY = doubleMin;
 
-    m_minY = std::numeric_limits<double>::max();
-    m_maxY = std::numeric_limits<double>::min();
+    // map values for waypoint's x, y, s and d normalized normal vectors
+    std::vector<double> waypointsS;
+    std::vector<double> waypointsX;
+    std::vector<double> waypointsY;
+
+    std::vector<double> waypointsDx; // x-component of normal vector
+    std::vector<double> waypointsDy; // y-component of normal vector
 
     // d_x and d_y are normal components of a waypoint
     std::string line;
@@ -42,11 +58,12 @@ void cWaypointMap::ReadMapFile()
 
         m_waypoints.push_back(sWaypoint(x, y, s, dx, dy));
 
-        // TODO: remove these:
-        m_waypointsS.push_back(s);
-        m_waypointsX.push_back(x);
-        m_waypointsY.push_back(y);
+        waypointsS.push_back(s);
+        waypointsX.push_back(x);
+        waypointsY.push_back(y);
 
+        waypointsDx.push_back(dx);
+        waypointsDy.push_back(dy);
 
         if (x < m_minX)
         {
@@ -66,73 +83,59 @@ void cWaypointMap::ReadMapFile()
             m_maxY = y;
         }
     }
-}
 
-void cWaypointMap::GetMapBoundaries(
-    double& left, double& right,
-    double& bottom, double& top) const
-{
-    left = m_minX;
-    right = m_maxX;
-    bottom = m_minY;
-    top = m_maxY;
-}
-
-const double cWaypointMap::GetMaxS() const
-{
-    // assuming that the last waypoint contains the maximum s value
-    return m_waypoints[m_waypoints.size() - 1].s;
-}
-
-int cWaypointMap::FindWaypointIdxForS(double s) const
-{
-    if (s < 0)
+    if (!waypointsS.empty())
     {
-        return 0;
+        m_maxS = waypointsS.back();
+        m_distLastFirstWp = Distance(
+            waypointsX.back(), waypointsY.back(),
+            waypointsX.front(), waypointsY.front());
+        m_trackLengthS = m_maxS + m_distLastFirstWp;
+
+
+        // copy points from beginning of track for smooth transition from
+        // end of track to start of track
+        waypointsS.push_back(m_trackLengthS);
+        waypointsX.push_back(waypointsX[0]);
+        waypointsY.push_back(waypointsY[0]);
+        waypointsDx.push_back(waypointsDx[0]);
+        waypointsDy.push_back(waypointsDy[0]);
+
+        m_splineX.set_points(waypointsS, waypointsX); // interpolate x over s
+        m_splineY.set_points(waypointsS, waypointsY); // interpolate y over s
+
+        m_splineDx.set_points(waypointsS, waypointsDx); // interpolate normal x over s
+        m_splineDy.set_points(waypointsS, waypointsDy); // interpolate normal y over s
+
+        // check that interpolation works as expected
+		//const auto pt0 = CartesianPosition(0.0, 0.0);
+		//printf("%s: at s=0: (%.3f,%.3f), CartesianPos=(%.3f,%.3f)\n",
+		//	__FUNCTION__, waypointsX[0], waypointsY[0], pt0.x, pt0.y);
+		//const auto ptTrackLength = CartesianPosition(m_trackLengthS, 0.0);
+		//printf("%s: at s=%.3f: (%.3f,%.3f), CartesianPos=(%.3f,%.3f)\n",
+		//	__FUNCTION__, m_trackLengthS,
+		//	waypointsX[waypointsX.size() - 1],
+		//	waypointsY[waypointsX.size() - 1],
+		//	ptTrackLength.x, ptTrackLength.y);
+		//printf("%s: diff=%.3f\n", __FUNCTION__, Distance(pt0, ptTrackLength));
     }
-
-    int right = m_waypoints.size() - 1;
-    if (s > m_waypoints[right].s)
-    {
-        s -= m_waypoints[right].s;
-    }
-
-    int left = 0;
-    int pivot = (right + left) / 2;
-    while (left < (right - 1))
-    {
-        if (m_waypoints[pivot].s > s)
-        {
-            // continue search in left half
-            right = pivot;
-        }
-        else if (m_waypoints[pivot].s <= s)
-        {
-            // continue search in right half
-            left = pivot;
-        }
-        pivot = (right + left) / 2;
-    }
-
-    return right;
 }
 
-const std::vector<sWaypoint>& cWaypointMap::GetWaypoints() const
+sPoint2D cWaypointMap::CartesianPosition(const double s, const double d) const
 {
-    return m_waypoints;
+    const double sNormalized = fmod(s, m_trackLengthS);
+    //if (fabs(sNormalized - s) > 0.1)
+    //{
+    //    printf("sNormalized=%.3f, s=%.3f\n", sNormalized, s);
+    //}
+
+    const double x = m_splineX(sNormalized) + m_splineDx(sNormalized) * d;
+    const double y = m_splineY(sNormalized) + m_splineDy(sNormalized) * d;
+    
+    return sPoint2D(x, y);
 }
 
-const std::vector<double>& cWaypointMap::GetMapPointsS() const
+const double cWaypointMap::GetTrackLength() const
 {
-    return m_waypointsS;
-}
-
-const std::vector<double>& cWaypointMap::GetMapPointsX() const
-{
-    return m_waypointsX;
-}
-
-const std::vector<double>& cWaypointMap::GetMapPointsY() const
-{
-    return m_waypointsY;
+    return m_trackLengthS;
 }

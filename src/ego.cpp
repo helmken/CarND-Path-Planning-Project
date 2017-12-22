@@ -1,13 +1,7 @@
 #include <sstream>
 
+#include "conversion_helpers.h"
 #include "ego.h"
-
-
-// jwdunn1 [00:34]
-// The "collider" on the car measures 4.47x2.43
-
-
-using namespace std;
 
 
 sEgo::sEgo()
@@ -25,7 +19,7 @@ sEgo::sEgo(
     , yaw(yaw), speed(mphToMs(v))
 {}
 
-eLaneName sEgo::GetLaneName() const
+eLaneName sEgo::LaneName() const
 {
     if (d >= 0.0 && d < laneWidth)
     {

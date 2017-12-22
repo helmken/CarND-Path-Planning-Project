@@ -9,11 +9,14 @@ set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
 set(sources
+    src/behavior.cpp
+    src/behavior.h
     src/behavior_planner.cpp
     src/behavior_planner.h
+    src/constants.cpp
+    src/constants.h
     src/conversion_helpers.cpp
     src/conversion_helpers.h
-    src/dynamic_object.h
     src/ego.cpp
     src/ego.h
     src/json.hpp
@@ -25,14 +28,13 @@ set(sources
     src/path_planner.cpp
     src/path_planner.h
     src/point.h
-    src/road_situation.cpp
-    src/road_situation.h
+    src/sensor_fusion.cpp
+    src/sensor_fusion.h
     src/simulator_message_reader.h
     src/spline.h
     src/trajectory_planner.cpp
     src/trajectory_planner.h
-    src/visualization.cpp
-    src/visualization.h
+    src/vehicle.h
     src/waypoint_map.cpp
     src/waypoint_map.h
 )
@@ -47,6 +49,7 @@ link_directories(/usr/local/Cellar/libuv/1.11.0/lib)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+include_directories(src/Eigen-3.3/Eigen)
 include_directories(../../uWebSockets/src)
 include_directories(../../vcpkg/installed/x86-windows/include)
 include_directories(../../glfw/include)

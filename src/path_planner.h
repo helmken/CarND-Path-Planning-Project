@@ -2,19 +2,24 @@
 #define PATH_PLANNER_H
 
 
-#include "dynamic_object.h"
+#include <chrono>
+#include <memory>
+
 #include "path.h"
-#include "waypoint_map.h"
+#include "vehicle.h"
 
 
-class cTrajectoryPlanner;
+class cSensorFusion;
 class cBehaviorPlanner;
+class cTrajectoryPlanner;
+class cWaypointMap;
 
 /**
  * Main module, sets up and maintains the other modules
- * - trajectory planner
+ * - waypoint map
+ * - sensor fusion
  * - behavior planner
- * - prediction (TODO: implement!)
+ * - trajectory planner
  */
 class cPathPlanner
 {
@@ -23,7 +28,7 @@ public:
     /**
      * Create and initialize modules.
      */
-    cPathPlanner(const cWaypointMap& waypointMap);
+    cPathPlanner();
 
     /*
     * Cleanup allocated resources.
@@ -35,25 +40,35 @@ public:
      */
     sPath Execute(
         const sEgo& ego,
-        const std::vector<sDynamicObject>& vehicles,
-        const sPath& previousPath);
+        const std::vector<sVehicle>& vehicles,
+        sPath& previousPath);
 
 private:
 
-    /*
-    * Responsible for generating trajectories.
-    */
-    cTrajectoryPlanner* m_trajectoryPlanner;
+    // waypoints of track
+    std::shared_ptr<cWaypointMap> m_waypointMap;
 
-    /*
-    * Responsible for decision to change or keep lane and adjust speed.
-    */
-    cBehaviorPlanner* m_behaviorPlanner;
+    // store other traffic participants
+    std::shared_ptr<cSensorFusion> m_sensorFusion;
 
-    /*
-    * Map of track, used for visualization and trajectory generation.
-    */
-    const cWaypointMap& m_waypointMap;
+    // plan behavior based on input from sensor fusion
+    std::shared_ptr<cBehaviorPlanner> m_behaviorPlanner;
+
+    // generate trajectory based on input from behavior planner
+    std::shared_ptr<cTrajectoryPlanner> m_trajectoryPlanner;
+
+
+	// track time for console output
+    std::chrono::time_point<std::chrono::system_clock> m_lastConsoleUpdate;
+
+	// lap counter
+    int m_lapCount;
+
+    // length of current lap
+	double m_currentLap;
+
+	// length of track from waypoint map
+	double m_trackLength;
 };
 
 #endif //PATH_PLANNER_H

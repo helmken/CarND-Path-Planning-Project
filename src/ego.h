@@ -2,7 +2,7 @@
 #define EGO_H
 
 
-#include "lane_info.h"
+#include "constants.h"
 
 // jwdunn1 [00:34]
 // The "collider" on the car measures 4.47x2.43
@@ -21,7 +21,7 @@ struct sEgo
 
     sEgo(double x, double y, double s, double d, double yaw, double speed);
 
-    eLaneName GetLaneName() const;
+    eLaneName LaneName() const;
 };
 
 std::string ToString(const sEgo& ego);

@@ -12,13 +12,17 @@
 #include "ego.h"
 #include "path_planner.h"
 #include "simulator_message_reader.h"
-#include "visualization.h"
 
 
-using namespace std;
-
-// for convenience
 using json = nlohmann::json;
+using std::chrono::duration;
+using std::chrono::system_clock;
+using std::milli;
+using std::string;
+using std::vector;
+
+
+constexpr double targetCycleTime(20.0);
 
 
 // Checks if the SocketIO event has JSON data.
@@ -42,27 +46,20 @@ string hasData(string s)
 
 int main() 
 {
+	std::cout << CLEAR_SCREEN;
+
     uWS::Hub uwsHub;
 
-    cWaypointMap waypointMap;
-    waypointMap.ReadMapFile();
-
-    cPathPlanner pathPlanner(waypointMap);
-
-    cVisualization visualization(waypointMap);
-    visualization.Run();
+    cPathPlanner pathPlanner;
 
     try
     {
         uwsHub.onMessage(
-            [&pathPlanner, &visualization]
-        (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
+            [&pathPlanner](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
         {
             // "42" at the start of the message means there's a websocket message event.
             // The 4 signifies a websocket message
             // The 2 signifies a websocket event
-            //auto sdata = string(data).substr(0, length);
-            //cout << sdata << endl;
             if (length && length > 2 && data[0] == '4' && data[1] == '2')
             {
                 auto jsonString = hasData(data);
@@ -70,27 +67,27 @@ int main()
                 if (jsonString != "")
                 {
                     auto simMessage = json::parse(jsonString);
-                    //cout << simMessage << "\n";
 
                     string simEventType = simMessage[0].get<string>();
                     if (simEventType == "telemetry")
                     {
-                        json telemetry = simMessage[1];
+                        const system_clock::time_point tStart = system_clock::now();
 
                         // Main car's localization Data
+                        json telemetry = simMessage[1];
+
                         sEgo ego = JsonReadEgo(telemetry);
 
                         // Sensor Fusion Data, a list of all other cars on the same side of the road.
                         json sensorFusion = telemetry["sensor_fusion"];
-
-                        vector<sDynamicObject> dynamicObjects = JsonReadDynamicObjects(sensorFusion);
+                        vector<sVehicle> vehicles = JsonReadRoadUsers(sensorFusion);
 
                         // Previous path data given to the Planner
                         sPath previousPath = JsonReadPath(telemetry);
 
                         sPath newPath = pathPlanner.Execute(
                             ego,
-                            dynamicObjects,
+                            vehicles,
                             previousPath);
 
                         json msgJson;
@@ -99,15 +96,17 @@ int main()
 
                         auto msg = "42[\"control\"," + msgJson.dump() + "]";
 
-                        //this_thread::sleep_for(chrono::milliseconds(1000));
-                        //this_thread::sleep_for(chrono::milliseconds(100));
-                        ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+                        //this_thread::sleep_for(std::chrono::milliseconds(100));
 
-                        visualization.Update(
-                            ego,
-                            dynamicObjects,
-                            previousPath,
-                            newPath);
+                        const auto deltaT = duration<double, milli>(system_clock::now() - tStart).count();
+                        const auto sleepDuration = static_cast<int>(targetCycleTime - deltaT);
+                        if (sleepDuration > 0)
+                        {
+                            //printf("%s: sleeping for %i milliseconds\n", __FUNCTION__, sleepDuration);
+                            std::this_thread::sleep_for(std::chrono::milliseconds(sleepDuration));
+                        }
+                        
+                        ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
                     }
                 }
                 else
@@ -170,6 +169,4 @@ int main()
     }
 
     uwsHub.run();
-
-    visualization.Shutdown();
 }

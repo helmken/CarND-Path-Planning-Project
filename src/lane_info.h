@@ -3,62 +3,61 @@
 
 
 #include <vector>
-#include "dynamic_object.h"
+
+#include "constants.h"
+#include "vehicle.h"
 
 
-const double laneWidth(4.0);
+struct sEgo;
+struct sVehicle;
 
-enum eLaneName
+class cLaneInfo
 {
-    LN_UNDEFINED = -1,
-    LN_LANE_LEFT,
-    LN_LANE_MIDDLE,
-    LN_LANE_RIGHT
-};
-
-enum eLaneChangeDirection
-{
-    LCD_LEFT,
-    LCD_STRAIGHT,
-    LCD_RIGHT
-};
-
-class sLaneInfo
-{
-    eLaneName laneName;
-
-    double boundaryLeft;
-    double boundaryRight;
-
-    bool leadingVehicleAhead;
-    sDynamicObject leadingVehicle;
-    double distanceToLeadingVehicle;
-
-    std::vector<sDynamicObject> dynamicObjects;
-
 public:
-    sLaneInfo(const eLaneName laneName);
+    cLaneInfo(const eLaneName laneName);
 
-    bool IsWithinLaneBoundaries(const double d);
+    void InitClosestVehicles(
+        sVehicle& leadingVehicle,
+        sVehicle& followingVehicle);
 
-    void FindLeadingVehicleInLane(
-        const double egoS);
+    bool IsWithinLaneBoundaries(const double d) const;
 
     bool IsLeadingVehicleAhead() const;
 
-    bool IsDistanceToLeadingVehicleLarger(const double distance) const;
+    double LeadingVehicleDistance() const;
 
-    double GetDistanceToLeadingVehicle() const;
+    eLaneName LaneName() const;
 
-    eLaneName GetLaneName() const;
+    void AddVehicle(const sVehicle& vehicle);
 
-    double GetSpeedOfLeadingVehicle() const;
+    void Reset();
 
-    int GetLeadingVehicleId() const;
+    // check if a vehicle occupies the lane laterally close to ego vehicle
+    bool IsLaneBlocked(const sEgo& ego) const;
 
-    void AddVehicle(const sDynamicObject& vehicle);
+    const sVehicle& GetLeadingVehicle() const;
+    const sVehicle& GetFollowingVehicle() const;
+
+    void SortVehiclesByDistanceToEgo();
+    std::vector<double> GetVehicleDistances() const;
+    const std::vector<sVehicle>& GetVehicles() const;
+
+private:
+    const eLaneName m_laneName;
+
+    double m_boundaryLeft;
+    double m_boundaryRight;
+
+    sVehicle m_leadingVehicle;
+    sVehicle m_followingVehicle;
+
+    std::vector<sVehicle> m_vehicles;
 };
 
 double LaneNameToD(eLaneName laneName);
+
+eLaneName LeftLaneOf(eLaneName laneName);
+eLaneName RightLaneOf(eLaneName laneName);
+
 
 #endif // LANE_INFO_H

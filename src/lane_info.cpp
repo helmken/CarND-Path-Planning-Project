@@ -1,127 +1,160 @@
+#include <algorithm>
+#include <assert.h>
 #include <limits>
+#include <stdexcept>
 
+#include "ego.h"
 #include "lane_info.h"
+#include "vehicle.h"
 
 
-using namespace std;
+auto constexpr vehicleLength(5.0);
 
 
-sLaneInfo::sLaneInfo(const eLaneName laneName)
-    : laneName(laneName)
-    , leadingVehicleAhead(false)
+cLaneInfo::cLaneInfo(const eLaneName laneName)
+    : m_laneName(laneName)
 {
     switch (laneName)
     {
     case LN_LANE_LEFT:
-        boundaryLeft = 0.0;
-        boundaryRight = boundaryLeft + laneWidth;
+        m_boundaryLeft = 0.0;
+        m_boundaryRight = m_boundaryLeft + laneWidth;
         break;
     case LN_LANE_MIDDLE:
-        boundaryLeft = laneWidth;
-        boundaryRight = boundaryLeft + laneWidth;
+        m_boundaryLeft = laneWidth;
+        m_boundaryRight = m_boundaryLeft + laneWidth;
         break;
     case LN_LANE_RIGHT:
-        boundaryLeft = 2.0 * laneWidth;
-        boundaryRight = boundaryLeft + laneWidth;
+        m_boundaryLeft = 2.0 * laneWidth;
+        m_boundaryRight = m_boundaryLeft + laneWidth;
         break;
     }
+
+    m_leadingVehicle.id = invalidVehicleId;
+    m_leadingVehicle.sDistanceEgo = doubleMax;
+    m_followingVehicle.id = invalidVehicleId;
+    m_followingVehicle.sDistanceEgo = -doubleMax;
 };
 
-bool sLaneInfo::IsWithinLaneBoundaries(const double d)
+void cLaneInfo::InitClosestVehicles(
+    sVehicle& leadingVehicle,
+    sVehicle& followingVehicle)
 {
-    if (d >= boundaryLeft && d < boundaryRight)
+    leadingVehicle = m_leadingVehicle;
+    followingVehicle = m_followingVehicle;
+}
+
+bool cLaneInfo::IsWithinLaneBoundaries(const double d) const
+{
+    if (d >= m_boundaryLeft && d < m_boundaryRight)
     {
         return true;
     }
     return false;
 };
 
-void sLaneInfo::AddVehicle(const sDynamicObject& vehicle)
+void cLaneInfo::AddVehicle(const sVehicle& vehicle)
 {
-    dynamicObjects.push_back(vehicle);
-}
-
-void sLaneInfo::FindLeadingVehicleInLane(
-    const double egoS)
-{
-    double closestS = numeric_limits<double>::max();
-
-    size_t closestIdx = dynamicObjects.size() + 1;
-
-    for (size_t i(0); i < dynamicObjects.size(); ++i)
+    if (vehicle.sDistanceEgo >= 0.0)
     {
-        double objS = dynamicObjects[i].s;
-        if (objS > egoS && objS < closestS)
+        if (vehicle.sDistanceEgo < m_leadingVehicle.sDistanceEgo)
         {
-            closestS = objS;
-            closestIdx = i;
+            m_leadingVehicle = vehicle;
         }
-    }
-
-    if (closestIdx < dynamicObjects.size())
-    {
-        leadingVehicleAhead = true;
-        leadingVehicle = dynamicObjects[closestIdx];
-        distanceToLeadingVehicle = closestS - egoS;
     }
     else
     {
-        leadingVehicleAhead = false;
+        if (vehicle.sDistanceEgo > m_followingVehicle.sDistanceEgo)
+        {
+            m_followingVehicle = vehicle;
+        }
     }
+
+    m_vehicles.push_back(vehicle);
 }
 
-bool sLaneInfo::IsLeadingVehicleAhead() const
+bool cLaneInfo::IsLeadingVehicleAhead() const
 {
-    return leadingVehicleAhead;
+    return invalidVehicleId != m_leadingVehicle.id;
 }
 
-bool sLaneInfo::IsDistanceToLeadingVehicleLarger(const double distance) const
+double cLaneInfo::LeadingVehicleDistance() const
 {
-    if (!leadingVehicleAhead)
-    {
-        return true;
-    }
-    if (distanceToLeadingVehicle > distance)
-    {
-        return true;
-    }
+    assert(invalidVehicleId != m_leadingVehicle.id);
+    return m_leadingVehicle.sDistanceEgo;
+}
 
+eLaneName cLaneInfo::LaneName() const
+{
+    return m_laneName;
+}
+
+void cLaneInfo::Reset()
+{
+    m_vehicles.clear();
+
+    m_leadingVehicle.id = invalidVehicleId;
+    m_leadingVehicle.sDistanceEgo = doubleMax;
+    
+    m_followingVehicle.id = invalidVehicleId;
+    m_followingVehicle.sDistanceEgo = -doubleMax;
+}
+
+bool cLaneInfo::IsLaneBlocked(const sEgo& ego) const
+{
+    for (const auto& vehicle : m_vehicles)
+    {
+        // reference point for position is approximately rear axle
+        const auto deltaS = vehicle.s - ego.s;
+        const auto deltaV = vehicle.v - ego.speed;
+        if (	deltaS >= 0.0
+        	&& 	deltaS < 2.0 * vehicleLength)
+        {
+            // vehicle is ahead
+    		return true;
+        }
+        else if (	deltaS < 0.0
+        		&& 	deltaS > -1.5 * vehicleLength)
+        {
+            // vehicle is behind
+    		return true;
+        }
+    }
     return false;
 }
 
-double sLaneInfo::GetDistanceToLeadingVehicle() const
+const sVehicle& cLaneInfo::GetLeadingVehicle() const
 {
-    if (!leadingVehicleAhead)
-    {
-        throw std::invalid_argument("distance to leading vehicle is invalid");
-    }
-
-    return distanceToLeadingVehicle;
+    return m_leadingVehicle;
 }
 
-eLaneName sLaneInfo::GetLaneName() const
+const sVehicle& cLaneInfo::GetFollowingVehicle() const
 {
-    return laneName;
+    return m_followingVehicle;
 }
 
-double sLaneInfo::GetSpeedOfLeadingVehicle() const
+void cLaneInfo::SortVehiclesByDistanceToEgo()
 {
-    if (leadingVehicleAhead)
-    {
-        return leadingVehicle.GetSpeed();
-    }
-
-    throw std::logic_error("not leading vehicle - not possible to determine speed");
+	sort(m_vehicles.begin(), m_vehicles.end(),
+		[](const sVehicle& veh0, const sVehicle& veh1) -> bool
+		{
+			return veh0.sDistanceEgo > veh1.sDistanceEgo;
+		});
 }
 
-int sLaneInfo::GetLeadingVehicleId() const
+std::vector<double> cLaneInfo::GetVehicleDistances() const
 {
-    if (leadingVehicleAhead)
-    {
-        return leadingVehicle.id;
-    }
+	std::vector<double> distances;
+	for (const auto& vehicle : m_vehicles)
+	{
+		distances.emplace_back(vehicle.sDistanceEgo);
+	}
+	return distances;
+}
 
-    throw std::logic_error("not leading vehicle - not possible to determine ID");
+const std::vector<sVehicle>& cLaneInfo::GetVehicles() const
+{
+	return m_vehicles;
 }
 
 double LaneNameToD(eLaneName laneName)
@@ -136,8 +169,35 @@ double LaneNameToD(eLaneName laneName)
     }
     else
     {
-        // LN_LANE_RIGHT
-        return 2.0 * laneWidth + laneWidth / 2.0;
+        // LN_LANE_RIGHT: keep extra distance to right road boundary
+        return 2.0 * laneWidth + laneWidth / 2.0 - 0.2; 
     }
 }
 
+eLaneName LeftLaneOf(eLaneName laneName)
+{
+    if (LN_LANE_MIDDLE == laneName)
+    {
+        return LN_LANE_LEFT;
+    }
+    else if (LN_LANE_RIGHT == laneName)
+    {
+        return LN_LANE_MIDDLE;
+    }
+
+    return LN_UNDEFINED;
+}
+
+eLaneName RightLaneOf(eLaneName laneName)
+{
+    if (LN_LANE_MIDDLE == laneName)
+    {
+        return LN_LANE_RIGHT;
+    }
+    else if (LN_LANE_LEFT == laneName)
+    {
+        return LN_LANE_MIDDLE;
+    }
+
+    return LN_UNDEFINED;
+}

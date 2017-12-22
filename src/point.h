@@ -12,14 +12,20 @@ struct sPoint2D
     {};
 };
 
-struct s2DCoordFrenet
+struct sFrenetPt
 {
     double s;
     double d;
 
-    s2DCoordFrenet(double s, double d)
+    sFrenetPt(double s, double d)
         : s(s), d(d)
     {};
+
+    void operator += (const sFrenetPt& other)
+    {
+        s += other.s;
+        d += other.d;
+    };
 };
 
 #endif // POINT_H

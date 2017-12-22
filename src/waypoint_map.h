@@ -1,11 +1,10 @@
 #ifndef WAYPOINT_MAP_H
 #define WAYPOINT_MAP_H
 
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <sstream>
+
 #include <vector>
+
+#include "spline.h"
 
 
 struct sWaypoint
@@ -30,36 +29,33 @@ struct sWaypoint
 class cWaypointMap
 {
 private:
-
-    // Load up map values for waypoint's x, y, s and d normalized normal vectors
-
     std::vector<sWaypoint> m_waypoints;
 
-    // TODO: these have to be removed after refactoring GetXY:
-    std::vector<double> m_waypointsS;
-    std::vector<double> m_waypointsX;
-    std::vector<double> m_waypointsY;
+    double m_maxS; // maximum s value
+    double m_distLastFirstWp; // distance between last and first waypoint
+    double m_trackLengthS; // maximum s value + distLastFirstWp
 
+    // interpolate track with splines
+    tk::spline m_splineX;
+    tk::spline m_splineY;
+
+    // interpolate normal vectors with splines
+    tk::spline m_splineDx;
+    tk::spline m_splineDy;
+
+    // boundaries of the track for visualization
     double m_minX;
     double m_maxX;
     double m_minY;
     double m_maxY;
 
 public:
+    cWaypointMap();
+
     void ReadMapFile();
-    void GetMapBoundaries(
-        double& left, double& right,
-        double& bottom, double& top) const;
-    const std::vector<sWaypoint>& GetWaypoints() const;
-    const double GetMaxS() const;
+    const double GetTrackLength() const;
 
-    // Find index of waypoint that has the smallest value larger than given s.
-    int FindWaypointIdxForS(double s) const;
-
-    // TODO: these have to be removed after refactoring GetXY:
-    const std::vector<double>& GetMapPointsS() const;
-    const std::vector<double>& GetMapPointsX() const;
-    const std::vector<double>& GetMapPointsY() const;
+    sPoint2D CartesianPosition(const double s, const double d) const;
 };
 
 #endif // WAYPOINT_MAP_H

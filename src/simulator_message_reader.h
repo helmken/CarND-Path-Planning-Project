@@ -1,25 +1,20 @@
 #ifndef SIMULATOR_MESSAGE_READER_H
 #define SIMULATOR_MESSAGE_READER_H
 
-#include "dynamic_object.h"
+#include "vehicle.h"
 #include "ego.h"
 #include "json.hpp"
 #include "path.h"
 
 sEgo JsonReadEgo(const nlohmann::json& telemetry)
 {
-    const double speed = telemetry["speed"];
-    
-    //printf("JsonReadEgo: speed=%.3f (m/s), speed=%.3f (MPH)\n",
-    //    mphToMs(speed), speed);
-
     sEgo ego(
         telemetry["x"], 
         telemetry["y"],
         telemetry["s"],
         telemetry["d"],
         telemetry["yaw"],
-        speed);
+        telemetry["speed"]);
     
     return ego;
 }
@@ -28,16 +23,14 @@ sPath JsonReadPath(const nlohmann::json& telemetry)
 {
     sPath path(
         telemetry["previous_path_x"],
-        telemetry["previous_path_y"],
-        telemetry["end_path_s"],
-        telemetry["end_path_d"]);
+        telemetry["previous_path_y"]);
 
     return path;
 }
 
-sDynamicObject ReadDynamicObject(const nlohmann::json& sensorFusion)
+sVehicle ReadVehicle(const nlohmann::json& sensorFusion)
 {
-    sDynamicObject dynamicObj(
+    sVehicle vehicle(
             sensorFusion[0],
             sensorFusion[1],
             sensorFusion[2],
@@ -46,18 +39,18 @@ sDynamicObject ReadDynamicObject(const nlohmann::json& sensorFusion)
             sensorFusion[5],
             sensorFusion[6]);
 
-    return dynamicObj;
+    return vehicle;
 }
 
-std::vector<sDynamicObject> JsonReadDynamicObjects(const nlohmann::json& sensorFusion)
+std::vector<sVehicle> JsonReadRoadUsers(const nlohmann::json& sensorFusion)
 {
-    std::vector<sDynamicObject> dynamicObjects;
-    for (size_t i(0); i < sensorFusion.size(); ++i)
+    std::vector<sVehicle> vehicles;
+    for (auto i(0); i < sensorFusion.size(); ++i)
     {
-        dynamicObjects.push_back(ReadDynamicObject(sensorFusion[i]));
+        vehicles.push_back(ReadVehicle(sensorFusion[i]));
     }
 
-    return dynamicObjects;
+    return vehicles;
 }
 
 #endif // SIMULATOR_MESSAGE_READER_H

@@ -1,75 +1,99 @@
 #include <chrono>
+#include <iostream>
+#include <memory>
 
+#include "behavior.h"
 #include "behavior_planner.h"
+#include "conversion_helpers.h"
 #include "path_planner.h"
+#include "sensor_fusion.h"
 #include "trajectory_planner.h"
+#include "waypoint_map.h"
 
 
-using namespace std;
-using namespace std::chrono;
+using std::chrono::time_point;
+using std::chrono::system_clock;
+using std::chrono::milliseconds;
+using std::chrono::duration;
+using std::chrono::seconds;
 
-cPathPlanner::cPathPlanner(const cWaypointMap& waypointMap)
-    : m_waypointMap(waypointMap)
+
+cPathPlanner::cPathPlanner()
+    : m_lastConsoleUpdate(seconds(0))
+	, m_lapCount(0)
+	, m_currentLap(0.0)
 {
-    m_behaviorPlanner = new cBehaviorPlanner();
-    m_trajectoryPlanner = new cTrajectoryPlanner();
+    m_waypointMap = std::make_shared<cWaypointMap>();
+    m_waypointMap->ReadMapFile();
 
-    m_behaviorPlanner->Init(m_trajectoryPlanner);
-    m_trajectoryPlanner->Init();
+	m_sensorFusion = std::make_shared<cSensorFusion>();
+    m_behaviorPlanner = std::make_shared<cBehaviorPlanner>();
+    m_trajectoryPlanner = std::make_shared<cTrajectoryPlanner>();
+
+    m_behaviorPlanner->Init(m_sensorFusion);
+    m_trajectoryPlanner->Init(m_waypointMap.get());
+
+    m_trackLength = m_waypointMap->GetTrackLength();
 }
 
 cPathPlanner::~cPathPlanner()
 {
-    delete m_behaviorPlanner;
-    delete m_trajectoryPlanner;
 }
 
 sPath cPathPlanner::Execute(
     const sEgo& ego,
-    const std::vector<sDynamicObject>& vehicles,
-    const sPath& previousPath)
+    const std::vector<sVehicle>& vehicles,
+    sPath& previousPath)
 {
-    static system_clock::time_point lastTime = system_clock::now();
-    static sEgo lastEgo = ego;
+	static auto lastEgo = ego;
+	static auto lastTime = system_clock::now();
 
-    system_clock::time_point currentTime = system_clock::now();
-    auto diff = currentTime - lastTime;
-    const double deltaT = duration<double, milli>(diff).count() / 1000.0;
-    const double deltaS = distance(ego.x, ego.y, lastEgo.x, lastEgo.y);
-    double speed = 0.0;
-    if (deltaT != 0.0)
-    {
-        speed = deltaS / deltaT;
-    }
-    //printf("deltaT=%.3f, deltaS=%.3f, speed=%.3f (m/s), speed=%.3f (MPH)\n", 
-    //    deltaT, deltaS, speed, msToMph(speed));
-    
-    lastTime = currentTime;
-    lastEgo = ego;
-    // -> average duration is approx. 20 milliseconds
+	time_point<system_clock> currentTime = system_clock::now();
+
+	auto deltaTrack = Distance(ego.x, ego.y, lastEgo.x, lastEgo.y);
+	m_currentLap += deltaTrack;
+	if (m_currentLap > m_trackLength)
+	{
+		m_currentLap -= m_trackLength;
+		++m_lapCount;
+	}
+
+	duration<double> cycleDuration = currentTime - lastTime;
+	const auto deltaT = cycleDuration.count();
+	const auto currentV = (deltaT == 0.0) ?
+			0.0 : deltaTrack / deltaT;
+
+	// update static variables
+	lastEgo = ego;
+	lastTime = currentTime;
 
     sPath newPath;
 
     try
     {
-        sBehavior plannedBehavior = m_behaviorPlanner->Execute(
-            ego, vehicles);
-        //printf(ToString(plannedBehavior).c_str());
+        m_sensorFusion->Execute(vehicles, ego);
+        const sBehavior& plannedBehavior = m_behaviorPlanner->Execute(ego);
 
-        int targetLane = LaneNameToLaneIdx(plannedBehavior.targetLane);
-
-        //newPath = GeneratePath(
-        //    ego,
-        //    m_waypointMap,
-        //    previousPath,
-        //    targetLane,
-        //    plannedBehavior.speedAtTargetPosition);
-        
-        newPath = GeneratePath(
+        newPath = m_trajectoryPlanner->GenerateTrajectory(
             plannedBehavior, 
             ego, 
-            m_waypointMap, 
             previousPath);
+
+    	duration<double> elapsedSeconds = currentTime - m_lastConsoleUpdate;
+    	if (elapsedSeconds.count() > 0.1)
+    	{
+    		// update console
+    		m_lastConsoleUpdate = currentTime;
+
+    		std::cout << CLEAR_SCREEN;
+
+			printf("lap: %i, current: %8.3f, v=%6.3f (m/s) %6.3f (miles/h)\n",
+					m_lapCount, m_currentLap, currentV, currentV / mphAsMs);
+			printf("===============================================================\n");
+    		plannedBehavior.Dump();
+			printf("===============================================================\n");
+    		m_sensorFusion->DumpState();
+    	}
     }
     catch (std::exception& ex)
     {

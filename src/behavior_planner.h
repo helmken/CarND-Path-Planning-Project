@@ -1,13 +1,12 @@
 #ifndef BEHAVIOR_PLANNER_H
 #define BEHAVIOR_PLANNER_H
 
-
+#include <chrono>
+#include <memory>
 #include <vector>
 
-#include "road_situation.h"
-#include "dynamic_object.h"
+#include "behavior.h"
 #include "ego.h"
-#include "path.h"
 
 
 // general tasks that will be handled by path planner 
@@ -15,122 +14,62 @@
 // - maintain safety distance
 // - avoid collisions
 
-enum eEgoState
-{
-    ES_LANE_KEEP, // stay close to lane center, drive at target speed
-    ES_PREPARE_LANE_CHANGE_LEFT, // adapt to speed and position on left lane
-    ES_LANE_CHANGE_LEFT, // move to left lane
-    ES_PREPARE_LANE_CHANGE_RIGHT, // adapt to speed and position on right lane
-    ES_LANE_CHANGE_RIGHT // move to right lane
-};
 
-// 50 MPH = 22.352 m/s
-//        = 80.467 km/h
-const double maxSpeed(22.3); // 50 MPH as meters per second
-
-// stay on current lane as long as distance to leading vehicle is larger
-const double thresholdKeepLane(30.0); 
-
-const int invalidVehicleId(-1);
-
-
-/*
-Behavior description as suggested in Lesson 4.2 
-"Behavior Planning - Understanding Output" 
-*/
-struct sBehavior
-{
-    eLaneName targetLane;
-
-    /*
-    ID of vehicle to follow: if ID is valid, ego speed has to be adapted to
-    target vehicle speed, otherwise ego can accelerate to maximum speed
-    */
-    int leadingVehicleId;
-
-    /*
-    desired speed at target position
-    */
-    double speedAtTargetPosition;
-
-    /*
-    distance to target position
-    */
-    double distanceToTargetPosition;
-
-    /*
-    duration to reach desired position
-    */
-    double timeToTargetPosition;
-
-    sBehavior()
-        : targetLane(LN_UNDEFINED)
-        , leadingVehicleId(-1)
-        , speedAtTargetPosition(-1.0)
-        , distanceToTargetPosition(-1.0)
-        , timeToTargetPosition(-1.0)
-    {};
-
-    sBehavior(
-        eLaneName lane,
-        int id,
-        double speed,
-        double distance,
-        double time)
-        : targetLane(lane)
-        , leadingVehicleId(id)
-        , speedAtTargetPosition(speed)
-        , distanceToTargetPosition(distance)
-        , timeToTargetPosition(time)
-    {};
-};
-
-std::string ToString(const sBehavior& behavior);
-
-
-class cTrajectoryPlanner;
+class cSensorFusion;
+struct sVehicle;
 
 class cBehaviorPlanner
 {
 public:
     cBehaviorPlanner();
 
-    void Init(cTrajectoryPlanner* trajectoryPlanner);
+    void Init(std::shared_ptr<cSensorFusion>& sensorFusion);
 
-    /**
-     * Generate trajectories for each possible next state and select
-     * the best possible next state based on a cost function.
+    /*
+     * Select suitable behavior based on input from sensor fusion.
      */
-    sBehavior Execute(
-        const sEgo& ego,
-        const std::vector<sDynamicObject>& vehicles);
+    const sBehavior& Execute(const sEgo& ego);
 
 private:
-    eEgoState m_egoState;
-    cTrajectoryPlanner* m_trajectoryPlanner;
+    void CheckNeighborLanes(const sEgo& ego, std::vector<sBehavior>& behaviors);
+    const std::vector<eEgoState>& PossibleSuccessorStates(
+        const sEgo& ego) const;
+    bool IncreaseDistanceToLeadingVehicle(const sEgo& ego);
+
+    std::shared_ptr<cSensorFusion> m_sensorFusion;
+
+    sBehavior m_currentBehavior;
+
+    std::vector<eEgoState> m_successorStatesLaneLeft;
+    std::vector<eEgoState> m_successorStatesLaneMiddle;
+    std::vector<eEgoState> m_successorStatesLaneRight;
+    std::vector<eEgoState> m_successorStatesEmpty;
 };
 
-bool StayOnCurrentLane(
+void DetermineTargetSpeed(sBehavior& behavior);
+
+std::vector<sBehavior> PossibleBehaviors(
     const sEgo& ego,
-    const cRoadSituation& roadInfo
-);
+    const std::shared_ptr<cSensorFusion>& roadSituation,
+    const std::vector<eEgoState>& successorStates);
 
-bool AccelerateToMaxSpeed(
-    const sLaneInfo& laneInfo,
-    sBehavior& plannedBehavior);
+sBehavior LowestCostBehavior(
+    const sEgo& ego, 
+    const std::vector<sBehavior>& possibleBehaviors);
 
-void AdaptSpeedToLeadingVehicle(
-    const sLaneInfo& laneInfo,
-    sBehavior& plannedBehavior);
+double PenaltyLaneChange(
+    const sBehavior& behavior);
 
-int LaneNameToLaneIdx(eLaneName laneName);
+double PenaltyNotOnMiddleLane(
+    const sBehavior& behavior);
 
-int GetLeftLaneIdx(eLaneName laneName);
+double PenaltySpeed(
+    const sBehavior& behavior);
 
-eLaneName GetLeftLaneName(eLaneName laneName);
+double PenaltyDistance(
+    const sBehavior& behavior);
 
-int GetRightLaneIdx(eLaneName laneName);
+double PenaltyCollision(const sBehavior& behavior);
 
-eLaneName GetRightLaneName(eLaneName laneName);
 
 #endif // BEHAVIOR_PLANNER_H
