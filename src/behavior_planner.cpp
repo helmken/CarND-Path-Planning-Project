@@ -1,5 +1,6 @@
-#include <math.h>
+#include <algorithm>
 #include <limits>
+#include <math.h>
 #include <vector>
 
 #include "behavior_planner.h"
