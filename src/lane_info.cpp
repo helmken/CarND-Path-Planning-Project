@@ -24,6 +24,7 @@ cLaneInfo::cLaneInfo(const eLaneName laneName)
         m_boundaryLeft = laneWidth;
         m_boundaryRight = m_boundaryLeft + laneWidth;
         break;
+    case LN_UNDEFINED:
     case LN_LANE_RIGHT:
         m_boundaryLeft = 2.0 * laneWidth;
         m_boundaryRight = m_boundaryLeft + laneWidth;

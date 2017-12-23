@@ -63,6 +63,15 @@ add_executable(path_planning
     ${sources}
 )
 
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+target_link_libraries(path_planning 
+    z 
+    ssl 
+    uv 
+    uWS
+)
+endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 target_link_libraries(path_planning 
     z 

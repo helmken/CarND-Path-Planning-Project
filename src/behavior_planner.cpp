@@ -99,15 +99,15 @@ const sBehavior& cBehaviorPlanner::Execute(const sEgo& ego)
 
 bool cBehaviorPlanner::IncreaseDistanceToLeadingVehicle(const sEgo& ego)
 {
-    switch (ego.LaneName())
-    {
-    case LN_LANE_LEFT:
-        break;
-    case LN_LANE_MIDDLE:
-        break;
-    case LN_LANE_RIGHT:
-        break;
-    }
+	//switch (ego.LaneName())
+	//{
+	//case LN_LANE_LEFT:
+	//	break;
+	//case LN_LANE_MIDDLE:
+	//	break;
+	//case LN_LANE_RIGHT:
+	//	break;
+	//}
 
     return false;
 }
@@ -200,6 +200,9 @@ const std::vector<eEgoState>& cBehaviorPlanner::PossibleSuccessorStates(
     case LN_LANE_RIGHT:
         return m_successorStatesLaneRight;
         break;
+    case LN_UNDEFINED:
+    	return m_successorStatesEmpty;
+    	break;
     }
 
     return m_successorStatesEmpty;

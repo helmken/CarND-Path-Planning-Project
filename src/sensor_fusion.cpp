@@ -167,6 +167,8 @@ void cSensorFusion::InitBehavior(const eLaneName targetLane, sBehavior& behavior
         m_laneRight.InitClosestVehicles(
             behavior.leadingVehicle, behavior.followingVehicle);
         break;
+    case LN_UNDEFINED:
+    	break;
     }
 }
 
@@ -308,6 +310,8 @@ bool cSensorFusion::CheckNeighborLanes(const sEgo& ego, sBehavior& behavior)
         behavior.laneIsBlockedLeft = m_laneMiddle.IsLaneBlocked(ego);
         behavior.laneIsBlockedRight = false;
         break;
+    case LN_UNDEFINED:
+    	break;
     }
 
     return false;

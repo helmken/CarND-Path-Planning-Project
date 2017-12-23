@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <cmath>
 #include <string>
 #include <sstream>
 
@@ -123,7 +124,7 @@ void cWaypointMap::ReadMapFile()
 
 sPoint2D cWaypointMap::CartesianPosition(const double s, const double d) const
 {
-    const double sNormalized = fmod(s, m_trackLengthS);
+    const double sNormalized = std::fmod(s, m_trackLengthS);
     //if (fabs(sNormalized - s) > 0.1)
     //{
     //    printf("sNormalized=%.3f, s=%.3f\n", sNormalized, s);
